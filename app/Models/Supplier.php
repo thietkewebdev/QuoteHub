@@ -27,6 +27,11 @@ class Supplier extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function ingestionBatches(): HasMany
+    {
+        return $this->hasMany(IngestionBatch::class);
+    }
+
     protected function casts(): array
     {
         return [
