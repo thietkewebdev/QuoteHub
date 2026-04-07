@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Concerns\HasQuoteHubNavigationGroup;
+use App\Filament\Widgets\Operations\OperationsControlCenterWidget;
 use App\Filament\Widgets\Operations\ProductDashboardPriceSearchWidget;
 use App\Filament\Widgets\Operations\SupplierDashboardSearchWidget;
 use BackedEnum;
@@ -37,7 +38,7 @@ class QuoteHubDashboard extends BaseDashboard
 
     public function getSubheading(): string|Htmlable|null
     {
-        return __('Search catalog products for quick prices, or find suppliers from your catalog.');
+        return null;
     }
 
     /**
@@ -54,6 +55,7 @@ class QuoteHubDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            OperationsControlCenterWidget::class,
             ProductDashboardPriceSearchWidget::class,
             SupplierDashboardSearchWidget::class,
         ];

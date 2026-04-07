@@ -10,11 +10,14 @@ use App\Services\Operations\DashboardMappedProductBestPrices;
 use App\Support\Locale\VietnamesePresentation;
 use Filament\Actions\Action;
 use Filament\Support\Enums\FontFamily;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 
 /**
  * Dashboard quick lookup: search catalog products by name or SKU and see best recorded unit price (excl. VAT).
@@ -24,6 +27,8 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
     protected static bool $isDiscovered = false;
 
     protected int|string|array $columnSpan = 'full';
+
+    protected string $view = 'filament.widgets.operations.product-price-table-widget';
 
     public function updatedTableSearch(): void
     {
@@ -51,8 +56,8 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading(__('Quick product price lookup'))
-            ->description(__('Lists active catalog products by name (like the Products page). Shows the lowest ex-VAT unit price from approved lines when available. Use the search box to filter by name or SKU (same rules as price history).'))
+            ->heading($this->mainHeading())
+            ->description($this->mainDescription())
             ->searchable()
             ->searchPlaceholder(__('Name or SKU…'))
             ->headerActions([
@@ -65,6 +70,7 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
             ->emptyStateHeading(__('No products'))
             ->emptyStateDescription(__('No active catalog products match your search, or the catalog is empty.'))
             ->emptyStateIcon(Heroicon::OutlinedMagnifyingGlass)
+            ->recordClasses('transition-colors duration-150 ease-out hover:bg-emerald-500/[0.06] dark:hover:bg-emerald-400/[0.07]')
             ->records(function (): Collection {
                 $rows = app(DashboardMappedProductBestPrices::class)
                     ->catalogLookupRows($this->getTableSearch(), 25);
@@ -98,7 +104,14 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                 TextColumn::make('best_unit_price')
                     ->label(__('Best unit price (excl. VAT)'))
                     ->placeholder('—')
+                    ->weight(FontWeight::Bold)
+                    ->color(fn ($state): ?string => $state !== null ? 'success' : null)
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state)),
+                TextColumn::make('best_price_badge')
+                    ->label('')
+                    ->badge()
+                    ->color('success')
+                    ->state(fn (array $record): ?string => $record['best_unit_price'] !== null ? __('Best price') : null),
                 TextColumn::make('best_supplier_name')
                     ->label(__('Supplier on that quote'))
                     ->placeholder('—')
@@ -114,8 +127,26 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
 
                         return $n < 1 ? '—' : __(':count suppliers', ['count' => $n]);
                     })
-                    ->color(fn ($state): string => (int) $state > 1 ? 'success' : 'gray'),
+                    ->color('gray'),
             ])
             ->paginated(false);
+    }
+
+    private function mainHeading(): string|Htmlable
+    {
+        return new HtmlString(
+            '<span class="text-lg font-bold tracking-tight text-gray-950 dark:text-white">'
+            .e(__('Quick product price lookup'))
+            .'</span>'
+        );
+    }
+
+    private function mainDescription(): string|Htmlable
+    {
+        return new HtmlString(
+            '<span class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">'
+            .e(__('Lists active catalog products by name (like the Products page). Shows the lowest ex-VAT unit price from approved lines when available. Use the search box to filter by name or SKU (same rules as price history).'))
+            .'</span>'
+        );
     }
 }

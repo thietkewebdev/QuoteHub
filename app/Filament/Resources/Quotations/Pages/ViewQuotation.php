@@ -43,9 +43,13 @@ class ViewQuotation extends ViewRecord
 
     public function content(Schema $schema): Schema
     {
+        $relationManagers = $this->getRelationManagersContentComponent();
+        $relationManagers->columnSpanFull();
+
         return $schema
             ->components([
                 SchemaView::make('filament.resources.quotations.pages.view-quotation-detail')
+                    ->columnSpanFull()
                     ->viewData(function (): array {
                         $q = $this->getRecord();
                         $q->loadMissing([
@@ -62,7 +66,7 @@ class ViewQuotation extends ViewRecord
                             'processTimeline' => $this->buildQuotationProcessTimeline($q),
                         ];
                     }),
-                $this->getRelationManagersContentComponent(),
+                $relationManagers,
             ]);
     }
 

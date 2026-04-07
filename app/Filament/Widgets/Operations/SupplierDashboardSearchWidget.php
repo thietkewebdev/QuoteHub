@@ -15,7 +15,9 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 
 /**
  * Dashboard quick lookup: search catalog suppliers by name or code.
@@ -25,6 +27,8 @@ final class SupplierDashboardSearchWidget extends TableWidget
     protected static bool $isDiscovered = false;
 
     protected int|string|array $columnSpan = 'full';
+
+    protected string $view = 'filament.widgets.operations.supplier-search-table-widget';
 
     public function updatedTableSearch(): void
     {
@@ -52,8 +56,8 @@ final class SupplierDashboardSearchWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading(__('Quick supplier lookup'))
-            ->description(__('Up to :max suppliers are listed; type in the search box to filter by name or code. Click a supplier to open their page (contacts, details). Click the quotation count to search quotations by that name.', ['max' => 100]))
+            ->heading($this->secondaryHeading())
+            ->description($this->secondaryDescription())
             ->searchable()
             ->searchPlaceholder(__('Supplier name or code…'))
             ->headerActions([
@@ -70,8 +74,8 @@ final class SupplierDashboardSearchWidget extends TableWidget
             ->emptyStateHeading(__('No suppliers'))
             ->emptyStateDescription(__('Add suppliers from supplier recall / catalog sync, or create them when needed.'))
             ->emptyStateIcon(Heroicon::OutlinedBuildingOffice2)
+            ->recordClasses('transition-colors duration-150 ease-out hover:bg-gray-500/[0.05] dark:hover:bg-white/[0.04]')
             ->records(function (): Collection {
-                // Read search from the Livewire table state (Filament’s injected `$search` arg is unreliable on some widgets).
                 $suppliers = app(DashboardSupplierSearch::class)->search($this->getTableSearch());
 
                 return $suppliers->mapWithKeys(function (Supplier $supplier): array {
@@ -107,6 +111,24 @@ final class SupplierDashboardSearchWidget extends TableWidget
                     ->url(fn (array $record): string => $this->quotationsSearchUrl((string) $record['name'])),
             ])
             ->paginated(false);
+    }
+
+    private function secondaryHeading(): string|Htmlable
+    {
+        return new HtmlString(
+            '<span class="text-sm font-semibold tracking-tight text-gray-600 dark:text-gray-400">'
+            .e(__('Quick supplier lookup'))
+            .'</span>'
+        );
+    }
+
+    private function secondaryDescription(): string|Htmlable
+    {
+        return new HtmlString(
+            '<span class="text-xs text-gray-500 dark:text-gray-500">'
+            .e(__('Up to :max suppliers are listed; type in the search box to filter by name or code. Click a supplier to open their page (contacts, details). Click the quotation count to search quotations by that name.', ['max' => 100]))
+            .'</span>'
+        );
     }
 
     /**

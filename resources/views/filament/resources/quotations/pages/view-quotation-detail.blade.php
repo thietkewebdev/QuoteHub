@@ -13,7 +13,7 @@
     }
 @endphp
 
-<div class="space-y-8 md:space-y-10">
+<div class="fi-quotation-detail-layout w-full min-w-0 max-w-none space-y-8 md:space-y-10">
     {{-- Header --}}
     <div class="rounded-xl border border-gray-200/90 bg-white p-4 shadow-md shadow-gray-900/[0.06] ring-1 ring-gray-950/5 transition-shadow duration-200 hover:shadow-lg hover:shadow-gray-900/[0.08] dark:border-white/10 dark:bg-gray-900 dark:shadow-none dark:ring-white/10 sm:p-6">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
@@ -109,7 +109,7 @@
                         ])
                     >
                         @if ($step['done'])
-                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                            <svg class="block h-5 w-5 shrink-0" width="20" height="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true" style="max-width: 20px; max-height: 20px">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                             </svg>
                         @else
@@ -139,9 +139,9 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
+    <div class="grid w-full min-w-0 grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
         {{-- Main column --}}
-        <div class="flex flex-col gap-8 lg:col-span-8">
+        <div class="flex min-w-0 flex-col gap-8 lg:col-span-8">
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {{-- Supplier card --}}
                 <div class="rounded-xl border border-gray-200/90 bg-white p-4 shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-950/5 transition-shadow duration-200 hover:shadow-lg hover:shadow-gray-900/[0.07] dark:border-white/10 dark:bg-gray-900 dark:shadow-none dark:ring-white/10 sm:p-5 sm:col-span-2 lg:col-span-1">
@@ -295,7 +295,7 @@
                                                 title="{{ __('Edit quotation') }}"
                                                 aria-label="{{ __('Edit quotation') }}"
                                             >
-                                                <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                                <svg class="block h-4 w-4 shrink-0" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="max-width: 16px; max-height: 16px">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                                 </svg>
                                             </a>
@@ -308,7 +308,7 @@
                                                     wire:confirm="{{ __('Duplicate this line?') }}"
                                                     wire:click="duplicateQuotationLine({{ (int) $item->getKey() }})"
                                                 >
-                                                    <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                                    <svg class="block h-4 w-4 shrink-0" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="max-width: 16px; max-height: 16px">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.015 9.015 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.015 9.015 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.376H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5M15.75 3.75v1.5a3.375 3.375 0 0 1-3.375 3.375h-1.5" />
                                                     </svg>
                                                 </button>
@@ -318,7 +318,7 @@
                                                     title="{{ __('Cannot duplicate lines on an approved quotation') }}"
                                                     aria-label="{{ __('Cannot duplicate lines on an approved quotation') }}"
                                                 >
-                                                    <svg class="h-4 w-4 shrink-0 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                                    <svg class="block h-4 w-4 shrink-0 opacity-50" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="max-width: 16px; max-height: 16px">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.015 9.015 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.015 9.015 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.376H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5M15.75 3.75v1.5a3.375 3.375 0 0 1-3.375 3.375h-1.5" />
                                                     </svg>
                                                 </span>
@@ -355,7 +355,7 @@
         </div>
 
         {{-- Sticky summary on large screens --}}
-        <aside class="lg:col-span-4">
+        <aside class="min-w-0 lg:col-span-4">
             <div class="space-y-4 rounded-xl border border-gray-200/90 bg-white p-4 shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-950/5 dark:border-white/10 dark:bg-gray-900 dark:shadow-none dark:ring-white/10 sm:p-5 lg:sticky lg:top-4 lg:transition-shadow lg:duration-200 lg:hover:shadow-lg lg:hover:shadow-gray-900/[0.07]">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     {{ __('Summary') }}
