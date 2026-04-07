@@ -156,6 +156,8 @@ return [
     'Pre-tax row total; adjust if it does not match quantity × unit price.' => 'Tổng dòng trước thuế; chỉnh nếu không khớp số lượng × đơn giá.',
     'VAT %' => 'VAT %',
     'VAT amount' => 'Tiền VAT',
+    'Filled from VAT % (rounded to whole đồng); edit to match invoice rounding.' => 'Tự điền từ % VAT (làm tròn đồng); sửa tay cho khớp làm tròn trên hóa đơn.',
+    'Optional: enter the invoice total with VAT; excl. subtotal and VAT are derived from VAT %.' => 'Tùy chọn: nhập tổng dòng gồm VAT trên hóa đơn; hệ thống tính ngược tạm tính chưa VAT và tiền VAT theo % VAT.',
     'Line total (incl. VAT)' => 'Tổng dòng (gồm VAT)',
     'Specs' => 'Thông số',
     'Line item' => 'Dòng hàng',

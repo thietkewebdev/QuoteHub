@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ManualQuotationEntries\Schemas;
 
 use App\Filament\Forms\SupplierSelect;
 use App\Models\Supplier;
+use App\Support\Locale\VietnameseMoneyInput;
 use App\Support\Locale\VietnamesePresentation;
 use App\Support\Quotation\ManualQuotationLineVatUi;
 use Filament\Forms\Components\DatePicker;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\ClosureValidationRule;
 
 class ManualQuotationEntryForm
 {
@@ -125,21 +127,35 @@ class ManualQuotationEntryForm
                                     }),
                                 TextInput::make('vat_amount_display')
                                     ->label(__('VAT amount'))
-                                    ->numeric()
                                     ->suffix('đ')
-                                    ->step(0.0001)
-                                    ->disabled()
+                                    ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
+                                    ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
+                                    ->rules(self::vnMoneyRules())
+                                    ->live(onBlur: true)
                                     ->dehydrated(false)
-                                    ->helperText(__('Subtotal (excl.) × VAT % ÷ 100.')),
+                                    ->helperText(__('Filled from VAT % (rounded to whole đồng); edit to match invoice rounding.'))
+                                    ->afterStateHydrated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: true);
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::applyManualVatAmount($set, $get);
+                                    }),
                                 TextInput::make('line_gross_display')
                                     ->label(__('Line total (incl. VAT)'))
-                                    ->numeric()
                                     ->suffix('đ')
-                                    ->step(0.0001)
-                                    ->disabled()
+                                    ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
+                                    ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
+                                    ->rules(self::vnMoneyRules())
+                                    ->live(onBlur: true)
                                     ->dehydrated(false)
                                     ->columnSpanFull()
-                                    ->helperText(__('Subtotal (excl.) + VAT amount (display only).')),
+                                    ->helperText(__('Optional: enter the invoice total with VAT; excl. subtotal and VAT are derived from VAT %.'))
+                                    ->afterStateHydrated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: true);
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::applyInclusiveGross($set, $get);
+                                    }),
                                 Textarea::make('specs_text')
                                     ->label(__('Specs'))
                                     ->rows(2)
@@ -151,5 +167,22 @@ class ManualQuotationEntryForm
                             ->addActionLabel(__('Add line')),
                     ]),
             ]);
+    }
+
+    /**
+     * @return list<ClosureValidationRule>
+     */
+    private static function vnMoneyRules(): array
+    {
+        return [
+            new ClosureValidationRule(function (string $attribute, mixed $value, callable $fail): void {
+                if ($value === null || $value === '') {
+                    return;
+                }
+                if (VietnameseMoneyInput::parse($value) === null) {
+                    $fail(__('Enter a valid amount (e.g. 1.080.000 or 1.080.000,5).'));
+                }
+            }),
+        ];
     }
 }

@@ -117,15 +117,33 @@ class QuotationReviewForm
                                     ->label(__('VAT amount'))
                                     ->suffix('đ')
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
-                                    ->disabled()
-                                    ->dehydrated(false),
+                                    ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
+                                    ->rules(self::vnMoneyRules())
+                                    ->live(onBlur: true)
+                                    ->dehydrated(false)
+                                    ->helperText(__('Filled from VAT % (rounded to whole đồng); edit to match invoice rounding.'))
+                                    ->afterStateHydrated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::applyManualVatAmount($set, $get);
+                                    }),
                                 TextInput::make('line_gross_display')
                                     ->label(__('Line total (incl. VAT)'))
                                     ->suffix('đ')
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
-                                    ->disabled()
+                                    ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
+                                    ->rules(self::vnMoneyRules())
+                                    ->live(onBlur: true)
                                     ->dehydrated(false)
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->helperText(__('Optional: enter the invoice total with VAT; excl. subtotal and VAT are derived from VAT %.'))
+                                    ->afterStateHydrated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        ManualQuotationLineVatUi::applyInclusiveGross($set, $get);
+                                    }),
                                 Textarea::make('specs_text')
                                     ->label(__('Specs'))
                                     ->rows(2)
