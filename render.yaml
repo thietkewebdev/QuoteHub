@@ -28,6 +28,10 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: database
+      # Default config uses database cache; queue:work reads cache for restart signals.
+      # File avoids requiring the `cache` table if migrations race with the worker on first boot.
+      - key: CACHE_STORE
+        value: file
       - key: APP_KEY
         sync: false
       - key: APP_URL
@@ -55,6 +59,8 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: database
+      - key: CACHE_STORE
+        value: file
       - key: APP_KEY
         sync: false
       - key: APP_URL
