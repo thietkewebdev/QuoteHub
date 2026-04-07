@@ -8,7 +8,8 @@ use App\Models\Product;
 use App\Services\Quotation\PriceHistoryQuery;
 use App\Support\Locale\VietnamesePresentation;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -32,7 +33,7 @@ final class DashboardMappedProductBestPrices
     {
         $base = $this->spotlightBase();
 
-        $groups = $this->aggregateGroups(clone $base, $limit);
+        $groups = $this->aggregateGroups($base, $limit);
 
         return $this->hydrateSpotlightGroups($base, $groups);
     }
@@ -65,7 +66,7 @@ final class DashboardMappedProductBestPrices
         $base = $this->spotlightBase()
             ->whereIn('quotation_items.mapped_product_id', $ids);
 
-        $groups = $this->aggregateGroupsForProductSet(clone $base);
+        $groups = $this->aggregateGroupsForProductSet($base);
         $byProductId = $groups->keyBy(fn (object $g): int => (int) $g->product_id);
 
         return $products->map(function (Product $product) use ($base, $byProductId): object {
@@ -92,7 +93,7 @@ final class DashboardMappedProductBestPrices
         if ($trimmed !== '') {
             $pattern = '%'.addcslashes($trimmed, '%_\\').'%';
             $op = $this->nameOrSkuLikeOperator();
-            $q->where(function (Builder $w) use ($pattern, $op): void {
+            $q->where(function (EloquentBuilder $w) use ($pattern, $op): void {
                 $w->where('name', $op, $pattern)
                     ->orWhere('sku', $op, $pattern);
             });
@@ -127,19 +128,12 @@ final class DashboardMappedProductBestPrices
      *
      * @return Collection<int, object>
      */
-    private function aggregateGroupsForProductSet(Builder $base): Collection
+    private function aggregateGroupsForProductSet(EloquentBuilder $base): Collection
     {
-        return $base
-            ->toBase()
-            ->selectRaw('quotation_items.mapped_product_id as product_id')
-            ->selectRaw('MIN(quotation_items.unit_price) as best_unit_price')
-            ->selectRaw('COUNT(DISTINCT quotations.supplier_name) as distinct_suppliers')
-            ->selectRaw('MAX(quotations.quote_date) as latest_quote_date')
-            ->groupBy('quotation_items.mapped_product_id')
-            ->get();
+        return $this->aggregatesOnlyQuery($base)->get();
     }
 
-    private function spotlightBase(): Builder
+    private function spotlightBase(): EloquentBuilder
     {
         return PriceHistoryQuery::make()
             ->whereNotNull('quotation_items.mapped_product_id')
@@ -147,18 +141,29 @@ final class DashboardMappedProductBestPrices
             ->where('products.is_active', true);
     }
 
-    private function aggregateGroups(Builder $base, int $limit): Collection
+    private function aggregateGroups(EloquentBuilder $base, int $limit): Collection
     {
-        return $base
-            ->toBase()
-            ->selectRaw('quotation_items.mapped_product_id as product_id')
-            ->selectRaw('MIN(quotation_items.unit_price) as best_unit_price')
-            ->selectRaw('COUNT(DISTINCT quotations.supplier_name) as distinct_suppliers')
-            ->selectRaw('MAX(quotations.quote_date) as latest_quote_date')
-            ->groupBy('quotation_items.mapped_product_id')
+        return $this->aggregatesOnlyQuery($base)
             ->orderByDesc('latest_quote_date')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * {@see PriceHistoryQuery::make()} selects quotation_items.* and a group key; PostgreSQL rejects that combined
+     * with GROUP BY. Reset the select list to aggregates only before running MIN/COUNT/MAX.
+     */
+    private function aggregatesOnlyQuery(EloquentBuilder $base): QueryBuilder
+    {
+        $query = $base->clone()->toBase();
+        $query->select([]);
+        $query->selectRaw('quotation_items.mapped_product_id as product_id');
+        $query->selectRaw('MIN(quotation_items.unit_price) as best_unit_price');
+        $query->selectRaw('COUNT(DISTINCT quotations.supplier_name) as distinct_suppliers');
+        $query->selectRaw('MAX(quotations.quote_date) as latest_quote_date');
+        $query->groupBy('quotation_items.mapped_product_id');
+
+        return $query;
     }
 
     /**
@@ -173,7 +178,7 @@ final class DashboardMappedProductBestPrices
      *     distinct_suppliers: int,
      * }>
      */
-    private function hydrateSpotlightGroups(Builder $base, Collection $groups): Collection
+    private function hydrateSpotlightGroups(EloquentBuilder $base, Collection $groups): Collection
     {
         return $groups->map(fn (object $g): object => $this->hydrateOneSpotlightGroup($base, $g))->values();
     }
@@ -194,7 +199,7 @@ final class DashboardMappedProductBestPrices
      *     distinct_suppliers: int,
      * }
      */
-    private function hydrateOneSpotlightGroup(Builder $base, object $g): object
+    private function hydrateOneSpotlightGroup(EloquentBuilder $base, object $g): object
     {
         $pick = (clone $base)
             ->where('quotation_items.mapped_product_id', $g->product_id)
