@@ -1,13 +1,31 @@
 # syntax=docker/dockerfile:1
 
+# Vite (Filament panel.css) imports vendor/filament/.../theme.css; .dockerignore excludes vendor,
+# so install Composer deps in an early stage and copy vendor into the Node build.
+FROM composer:2 AS composer
+
+WORKDIR /app
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+COPY composer.json composer.lock ./
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader
+
 FROM node:22-alpine AS frontend
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 RUN npm install --ignore-scripts --no-audit
 
 COPY . .
+COPY --from=composer /app/vendor ./vendor
+
 RUN npm run build
 
 FROM php:8.3-apache-bookworm
