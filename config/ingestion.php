@@ -97,6 +97,8 @@ return [
     | Queued OCR ({@see \App\Jobs\OCR\RunOcrForFileJob}) uses Google Document AI / Vision only (no Tesseract fallback).
     |
     | {@see \App\Services\Ingestion\IngestionGoogleOcrDraftService} runs after upload when enabled.
+    | With an async queue it runs in {@see \App\Jobs\Ingestion\CaptureGoogleOcrDraftForBatchJob} so the create form
+    | does not block on Document AI (avoids Livewire timeouts on slow PDFs).
     | Set INGESTION_GOOGLE_OCR=false to disable (or legacy INGESTION_GOOGLE_OCR_AFTER_UPLOAD=false).
     | Requires GCP in config/services.php (gcp.*) and GOOGLE_APPLICATION_CREDENTIALS.
     |

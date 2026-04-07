@@ -4,6 +4,7 @@ namespace App\Filament\Resources\IngestionBatches\Pages;
 
 use App\Actions\Ingestion\DispatchBatchOcrJobsAction;
 use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
+use App\Jobs\Ingestion\CaptureGoogleOcrDraftForBatchJob;
 use App\Models\IngestionBatch;
 use App\Services\Ingestion\IngestionBatchCreationService;
 use App\Services\Ingestion\IngestionFileStorageService;
@@ -57,13 +58,7 @@ class CreateIngestionBatch extends CreateRecord
 
         DB::afterCommit(fn () => $fileService->deleteStagedRelativePaths($pathList));
 
-        $batch = $batch->refresh();
-
-        if ((bool) config('ingestion.google_ocr.enabled', true)) {
-            app(IngestionGoogleOcrDraftService::class)->captureForBatch($batch->loadMissing(['files']));
-        }
-
-        return $batch;
+        return $batch->refresh();
     }
 
     protected function afterCreate(): void
@@ -76,7 +71,39 @@ class CreateIngestionBatch extends CreateRecord
                 ->send();
         }
 
+        $this->scheduleGoogleOcrDraftCaptureAfterCommit();
         $this->scheduleAutoDispatchOcrAfterCreate();
+    }
+
+    /**
+     * Google OCR for the review draft runs after DB commit. On async queues it is deferred to a job so the
+     * Livewire "create" request returns quickly (Document AI on PDF can exceed HTTP timeouts).
+     */
+    protected function scheduleGoogleOcrDraftCaptureAfterCommit(): void
+    {
+        if (! (bool) config('ingestion.google_ocr.enabled', true)) {
+            return;
+        }
+
+        $record = $this->getRecord();
+        if (! $record instanceof IngestionBatch || $record->file_count === 0) {
+            return;
+        }
+
+        $batchId = (int) $record->getKey();
+
+        DB::afterCommit(function () use ($batchId): void {
+            if (in_array(config('queue.default'), ['sync', 'null'], true)) {
+                $batch = IngestionBatch::query()->with('files')->find($batchId);
+                if ($batch !== null) {
+                    app(IngestionGoogleOcrDraftService::class)->captureForBatch($batch);
+                }
+
+                return;
+            }
+
+            CaptureGoogleOcrDraftForBatchJob::dispatch($batchId);
+        });
     }
 
     /**
