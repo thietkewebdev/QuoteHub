@@ -89,7 +89,6 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                 TextColumn::make('product_name')
                     ->label(__('Product'))
                     ->wrap()
-                    ->searchable()
                     ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('product_sku')
                     ->label(__('SKU'))

@@ -68,7 +68,8 @@ final class ProductMappingSuggestionService
         $products = Product::query()
             ->select(['id', 'name', 'sku'])
             ->where('is_active', true)
-            ->whereRaw("LOWER(TRIM(COALESCE(sku, ''))) = ?", [$normModel])
+            // Bind empty string for COALESCE so PostgreSQL never sees `""` (identifier) typos in raw SQL.
+            ->whereRaw('LOWER(TRIM(COALESCE(sku, ?))) = ?', ['', $normModel])
             ->get();
 
         foreach ($products as $product) {
