@@ -10,7 +10,8 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
-    preDeployCommand: php artisan migrate --force --no-interaction && php artisan storage:link --force && php artisan optimize
+    # Render invokes this without a shell; `&&` must run inside sh -c.
+    preDeployCommand: sh -c "cd /var/www/html && php artisan migrate --force --no-interaction && php artisan storage:link --force && php artisan optimize"
     envVars:
       - key: APP_ENV
         value: production
