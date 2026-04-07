@@ -3,7 +3,7 @@
 namespace App\Services\OCR;
 
 use App\Models\IngestionFile;
-use Illuminate\Support\Facades\Storage;
+use App\Support\Ingestion\IngestionFileLocalMaterializer;
 use Throwable;
 
 /**
@@ -24,7 +24,7 @@ class OcrExtractionService
             throw new OcrExtractionException(__('This file type is not supported for OCR in Quote Hub.'));
         }
 
-        $absolutePath = $this->absolutePath($ingestionFile);
+        [$absolutePath, $cleanup] = $this->absolutePathForOcr($ingestionFile);
         if ($absolutePath === null) {
             throw new OcrExtractionException(__('File is missing from storage.'));
         }
@@ -37,6 +37,10 @@ class OcrExtractionService
                 (int) $e->getCode(),
                 $e
             );
+        } finally {
+            if ($cleanup !== null) {
+                ($cleanup)();
+            }
         }
 
         if (! $this->googlePayloadHasUsableContent($payload)) {
@@ -69,20 +73,17 @@ class OcrExtractionService
         return $mime === 'application/pdf';
     }
 
-    protected function absolutePath(IngestionFile $ingestionFile): ?string
+    /**
+     * @return array{0: ?string, 1: ?\Closure}
+     */
+    protected function absolutePathForOcr(IngestionFile $ingestionFile): array
     {
-        $relative = $ingestionFile->storage_path;
+        $relative = (string) $ingestionFile->storage_path;
         if (blank($relative)) {
-            return null;
+            return [null, null];
         }
 
-        $disk = Storage::disk((string) config('ingestion.disk', 'local'));
-
-        if (! $disk->exists($relative)) {
-            return null;
-        }
-
-        return $disk->path($relative);
+        return IngestionFileLocalMaterializer::pathForProcessing($relative, (string) config('ingestion.disk', 'local'));
     }
 
     /**

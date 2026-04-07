@@ -7,9 +7,9 @@ use App\Models\IngestionFile;
 use App\Models\QuotationReviewDraft;
 use App\Services\OCR\OcrRouterService;
 use App\Services\OCR\UnsupportedOcrMimeTypeException;
+use App\Support\Ingestion\IngestionFileLocalMaterializer;
 use App\Services\Quotation\QuotationReviewPayloadFactory;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -30,7 +30,6 @@ final class IngestionGoogleOcrDraftService
 
         $batch->loadMissing(['files']);
 
-        $disk = Storage::disk((string) config('ingestion.disk', 'local'));
         $ocrFiles = $batch->files
             ->sortBy(fn (IngestionFile $f): array => [$f->page_order, $f->id])
             ->values()
@@ -51,7 +50,12 @@ final class IngestionGoogleOcrDraftService
 
         foreach ($ocrFiles as $file) {
             $relative = (string) $file->storage_path;
-            if (! $disk->exists($relative)) {
+            [$absolute, $cleanup] = IngestionFileLocalMaterializer::pathForProcessing(
+                $relative,
+                (string) config('ingestion.disk', 'local'),
+            );
+
+            if ($absolute === null) {
                 Log::warning('ingestion.google_ocr.file_missing', [
                     'ingestion_batch_id' => $batch->id,
                     'ingestion_file_id' => $file->id,
@@ -61,7 +65,6 @@ final class IngestionGoogleOcrDraftService
                 continue;
             }
 
-            $absolute = $disk->path($relative);
             try {
                 $result = $this->ocrRouter->extract($absolute);
             } catch (UnsupportedOcrMimeTypeException $e) {
@@ -81,6 +84,10 @@ final class IngestionGoogleOcrDraftService
                 $this->persistDraft($batch, $this->buildFailedPayload($batch, $e->getMessage()));
 
                 return;
+            } finally {
+                if ($cleanup !== null) {
+                    ($cleanup)();
+                }
             }
 
             $provider = (string) ($result['provider'] ?? '');

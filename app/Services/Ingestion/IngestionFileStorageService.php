@@ -95,11 +95,19 @@ class IngestionFileStorageService
                 }
             }
 
-            $finalPath = $this->ingestionDisk->path($destinationRelative);
-            $mime = mime_content_type($finalPath) ?: 'application/octet-stream';
-            $fileSize = filesize($finalPath);
+            $ingestionDiskName = config('ingestion.disk', 'local');
+            $driver = (string) config('filesystems.disks.'.$ingestionDiskName.'.driver', 'local');
 
-            [$width, $height] = $this->imageDimensions($finalPath, $mime);
+            if ($driver === 'local') {
+                $finalPath = $this->ingestionDisk->path($destinationRelative);
+                $mime = mime_content_type($finalPath) ?: 'application/octet-stream';
+                $fileSize = filesize($finalPath);
+                [$width, $height] = $this->imageDimensions($finalPath, $mime);
+            } else {
+                $mime = $this->ingestionDisk->mimeType($destinationRelative) ?: 'application/octet-stream';
+                $fileSize = $this->ingestionDisk->size($destinationRelative);
+                [$width, $height] = $this->imageDimensionsRemote($destinationRelative, $mime);
+            }
 
             $file = IngestionFile::query()->create([
                 'ingestion_batch_id' => $batch->id,
@@ -164,6 +172,29 @@ class IngestionFileStorageService
         }
 
         $info = @getimagesize($absolutePath);
+        if ($info === false) {
+            return [null, null];
+        }
+
+        return [$info[0] ?? null, $info[1] ?? null];
+    }
+
+    /**
+     * @return array{0: ?int, 1: ?int}
+     */
+    protected function imageDimensionsRemote(string $relativePath, string $mime): array
+    {
+        if (! str_starts_with($mime, 'image/')) {
+            return [null, null];
+        }
+
+        $binary = $this->ingestionDisk->get($relativePath);
+        if (! is_string($binary) || $binary === '') {
+            return [null, null];
+        }
+
+        $info = @getimagesizefromstring($binary);
+
         if ($info === false) {
             return [null, null];
         }
