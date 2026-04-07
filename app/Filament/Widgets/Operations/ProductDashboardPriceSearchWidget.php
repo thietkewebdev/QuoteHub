@@ -52,7 +52,7 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
     {
         return $table
             ->heading(__('Quick product price lookup'))
-            ->description(__('Search by product name or SKU. Shows the lowest ex-VAT unit price on record for each matching catalog product (same rules as price history).'))
+            ->description(__('Lists active catalog products by name (like the Products page). Shows the lowest ex-VAT unit price from approved lines when available. Use the search box to filter by name or SKU (same rules as price history).'))
             ->searchable()
             ->searchPlaceholder(__('Name or SKU…'))
             ->headerActions([
@@ -62,12 +62,12 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                     ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                     ->visible(fn (): bool => PriceHistory::canAccess()),
             ])
-            ->emptyStateHeading(__('Start typing'))
-            ->emptyStateDescription(__('Enter part of the product name or SKU above to see matching prices.'))
+            ->emptyStateHeading(__('No products'))
+            ->emptyStateDescription(__('No active catalog products match your search, or the catalog is empty.'))
             ->emptyStateIcon(Heroicon::OutlinedMagnifyingGlass)
             ->records(function (): Collection {
                 $rows = app(DashboardMappedProductBestPrices::class)
-                    ->searchByNameOrSku($this->getTableSearch(), 25);
+                    ->catalogLookupRows($this->getTableSearch(), 25);
 
                 return $rows->mapWithKeys(function (object $row): array {
                     $id = (string) $row->product_id;
@@ -97,9 +97,11 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                     ->fontFamily(FontFamily::Mono),
                 TextColumn::make('best_unit_price')
                     ->label(__('Best unit price (excl. VAT)'))
+                    ->placeholder('—')
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state)),
                 TextColumn::make('best_supplier_name')
                     ->label(__('Supplier on that quote'))
+                    ->placeholder('—')
                     ->wrap(),
                 TextColumn::make('quote_date_label')
                     ->label(__('Quote date'))
@@ -107,7 +109,11 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                 TextColumn::make('distinct_suppliers')
                     ->label(__('Suppliers in history'))
                     ->badge()
-                    ->formatStateUsing(fn ($state): string => __(':count suppliers', ['count' => (int) $state]))
+                    ->formatStateUsing(function ($state): string {
+                        $n = (int) $state;
+
+                        return $n < 1 ? '—' : __(':count suppliers', ['count' => $n]);
+                    })
                     ->color(fn ($state): string => (int) $state > 1 ? 'success' : 'gray'),
             ])
             ->paginated(false);

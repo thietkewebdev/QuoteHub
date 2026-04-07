@@ -10,6 +10,7 @@ use App\Support\Locale\VietnamesePresentation;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Rows for the operations dashboard: canonical product + lowest seen unit price (excl. VAT) among visible history lines.
@@ -37,48 +38,105 @@ final class DashboardMappedProductBestPrices
     }
 
     /**
-     * Products whose catalog name or SKU matches the query, with best visible history unit price per product.
+     * Dashboard lookup rows: active catalog products (default: first by name, like the Products list), optionally
+     * filtered by name/SKU. Each row includes best visible history unit price when any mapped line exists.
+     *
+     * Uses case-insensitive matching on PostgreSQL (`ilike`) so search matches Render (pgsql) expectations.
      *
      * @return Collection<int, object{
      *     product_id: int,
      *     product_name: string,
      *     product_sku: ?string,
-     *     best_unit_price: float,
+     *     best_unit_price: ?float,
      *     best_supplier_name: string,
      *     quote_date_label: ?string,
      *     distinct_suppliers: int,
      * }>
      */
-    public function searchByNameOrSku(?string $query, int $limit = 25): Collection
+    public function catalogLookupRows(?string $query, int $limit = 25): Collection
     {
-        $trimmed = $query !== null ? trim($query) : '';
-        if ($trimmed === '') {
+        $products = $this->orderedActiveProductsForLookup($query, $limit);
+
+        if ($products->isEmpty()) {
             return collect();
         }
 
-        $escaped = addcslashes($trimmed, '%_\\');
-        $like = '%'.$escaped.'%';
-
-        $matchingIds = Product::query()
-            ->where('is_active', true)
-            ->where(function (Builder $w) use ($like): void {
-                $w->where('name', 'like', $like)
-                    ->orWhere('sku', 'like', $like);
-            })
-            ->orderBy('name')
-            ->limit(250)
-            ->pluck('id');
-
-        if ($matchingIds->isEmpty()) {
-            return collect();
-        }
-
+        $ids = $products->pluck('id');
         $base = $this->spotlightBase()
-            ->whereIn('quotation_items.mapped_product_id', $matchingIds);
+            ->whereIn('quotation_items.mapped_product_id', $ids);
 
-        $groups = $this->aggregateGroups(clone $base, $limit);
+        $groups = $this->aggregateGroupsForProductSet(clone $base);
+        $byProductId = $groups->keyBy(fn (object $g): int => (int) $g->product_id);
 
-        return $this->hydrateSpotlightGroups($base, $groups);
+        return $products->map(function (Product $product) use ($base, $byProductId): object {
+            $group = $byProductId->get($product->getKey());
+            if ($group === null) {
+                return $this->emptyPriceRowForProduct($product);
+            }
+
+            return $this->hydrateOneSpotlightGroup($base, $group);
+        })->values();
+    }
+
+    /**
+     * @return Collection<int, Product>
+     */
+    private function orderedActiveProductsForLookup(?string $query, int $limit): Collection
+    {
+        $trimmed = Str::trim((string) ($query ?? ''));
+
+        $q = Product::query()
+            ->where('is_active', true)
+            ->orderBy('name');
+
+        if ($trimmed !== '') {
+            $pattern = '%'.addcslashes($trimmed, '%_\\').'%';
+            $op = $this->nameOrSkuLikeOperator();
+            $q->where(function (Builder $w) use ($pattern, $op): void {
+                $w->where('name', $op, $pattern)
+                    ->orWhere('sku', $op, $pattern);
+            });
+        }
+
+        return $q->limit($limit)->get();
+    }
+
+    /**
+     * PostgreSQL LIKE is case-sensitive; use ILIKE so dashboard search matches Render (pgsql) and local (sqlite).
+     */
+    private function nameOrSkuLikeOperator(): string
+    {
+        return Product::query()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+    }
+
+    private function emptyPriceRowForProduct(Product $product): object
+    {
+        return (object) [
+            'product_id' => (int) $product->getKey(),
+            'product_name' => (string) $product->name,
+            'product_sku' => filled($product->sku) ? (string) $product->sku : null,
+            'best_unit_price' => null,
+            'best_supplier_name' => '—',
+            'quote_date_label' => null,
+            'distinct_suppliers' => 0,
+        ];
+    }
+
+    /**
+     * One aggregate row per product that has at least one visible history line (caller constrains product ids).
+     *
+     * @return Collection<int, object>
+     */
+    private function aggregateGroupsForProductSet(Builder $base): Collection
+    {
+        return $base
+            ->toBase()
+            ->selectRaw('quotation_items.mapped_product_id as product_id')
+            ->selectRaw('MIN(quotation_items.unit_price) as best_unit_price')
+            ->selectRaw('COUNT(DISTINCT quotations.supplier_name) as distinct_suppliers')
+            ->selectRaw('MAX(quotations.quote_date) as latest_quote_date')
+            ->groupBy('quotation_items.mapped_product_id')
+            ->get();
     }
 
     private function spotlightBase(): Builder
@@ -117,36 +175,55 @@ final class DashboardMappedProductBestPrices
      */
     private function hydrateSpotlightGroups(Builder $base, Collection $groups): Collection
     {
-        return $groups->map(function (object $g) use ($base): object {
-            $pick = (clone $base)
-                ->where('quotation_items.mapped_product_id', $g->product_id)
-                ->where('quotation_items.unit_price', $g->best_unit_price)
-                ->orderByDesc('quotations.quote_date')
-                ->orderByDesc('quotation_items.id')
-                ->select([
-                    'products.name as product_name',
-                    'products.sku as product_sku',
-                    'quotations.supplier_name',
-                    'quotations.quote_date',
-                ])
-                ->first();
+        return $groups->map(fn (object $g): object => $this->hydrateOneSpotlightGroup($base, $g))->values();
+    }
 
-            $quoteDate = $pick?->quote_date;
-            $quoteLabel = $quoteDate instanceof CarbonInterface
-                ? $quoteDate->format(VietnamesePresentation::DATE_FORMAT)
-                : null;
+    /**
+     * @param  object{
+     *     product_id: mixed,
+     *     best_unit_price: mixed,
+     *     distinct_suppliers: mixed,
+     * }  $g
+     * @return object{
+     *     product_id: int,
+     *     product_name: string,
+     *     product_sku: ?string,
+     *     best_unit_price: float,
+     *     best_supplier_name: string,
+     *     quote_date_label: ?string,
+     *     distinct_suppliers: int,
+     * }
+     */
+    private function hydrateOneSpotlightGroup(Builder $base, object $g): object
+    {
+        $pick = (clone $base)
+            ->where('quotation_items.mapped_product_id', $g->product_id)
+            ->where('quotation_items.unit_price', $g->best_unit_price)
+            ->orderByDesc('quotations.quote_date')
+            ->orderByDesc('quotation_items.id')
+            ->select([
+                'products.name as product_name',
+                'products.sku as product_sku',
+                'quotations.supplier_name',
+                'quotations.quote_date',
+            ])
+            ->first();
 
-            return (object) [
-                'product_id' => (int) $g->product_id,
-                'product_name' => (string) ($pick?->product_name ?? ''),
-                'product_sku' => $pick && $pick->product_sku !== null && $pick->product_sku !== ''
-                    ? (string) $pick->product_sku
-                    : null,
-                'best_unit_price' => (float) $g->best_unit_price,
-                'best_supplier_name' => (string) (($pick?->supplier_name) ?? '—'),
-                'quote_date_label' => $quoteLabel,
-                'distinct_suppliers' => (int) $g->distinct_suppliers,
-            ];
-        })->values();
+        $quoteDate = $pick?->quote_date;
+        $quoteLabel = $quoteDate instanceof CarbonInterface
+            ? $quoteDate->format(VietnamesePresentation::DATE_FORMAT)
+            : null;
+
+        return (object) [
+            'product_id' => (int) $g->product_id,
+            'product_name' => (string) ($pick?->product_name ?? ''),
+            'product_sku' => $pick && $pick->product_sku !== null && $pick->product_sku !== ''
+                ? (string) $pick->product_sku
+                : null,
+            'best_unit_price' => (float) $g->best_unit_price,
+            'best_supplier_name' => (string) (($pick?->supplier_name) ?? '—'),
+            'quote_date_label' => $quoteLabel,
+            'distinct_suppliers' => (int) $g->distinct_suppliers,
+        ];
     }
 }
