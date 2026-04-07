@@ -8,7 +8,6 @@ use App\Jobs\Ingestion\CaptureGoogleOcrDraftForBatchJob;
 use App\Models\IngestionBatch;
 use App\Services\Ingestion\IngestionBatchCreationService;
 use App\Services\Ingestion\IngestionFileStorageService;
-use App\Services\Ingestion\IngestionGoogleOcrDraftService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -76,8 +75,8 @@ class CreateIngestionBatch extends CreateRecord
     }
 
     /**
-     * Google OCR for the review draft runs after DB commit. On async queues it is deferred to a job so the
-     * Livewire "create" request returns quickly (Document AI on PDF can exceed HTTP timeouts).
+     * Dispatch draft-capture with afterResponse() so the HTTP response completes before Document AI runs
+     * (avoids Livewire spinner stuck on sync queue or long API calls).
      */
     protected function scheduleGoogleOcrDraftCaptureAfterCommit(): void
     {
@@ -93,16 +92,7 @@ class CreateIngestionBatch extends CreateRecord
         $batchId = (int) $record->getKey();
 
         DB::afterCommit(function () use ($batchId): void {
-            if (in_array(config('queue.default'), ['sync', 'null'], true)) {
-                $batch = IngestionBatch::query()->with('files')->find($batchId);
-                if ($batch !== null) {
-                    app(IngestionGoogleOcrDraftService::class)->captureForBatch($batch);
-                }
-
-                return;
-            }
-
-            CaptureGoogleOcrDraftForBatchJob::dispatch($batchId);
+            CaptureGoogleOcrDraftForBatchJob::dispatch($batchId)->afterResponse();
         });
     }
 
