@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\IngestionBatches\Pages;
 
+use App\Actions\Ingestion\DispatchBatchOcrJobsAction;
 use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
+use App\Models\IngestionBatch;
 use App\Services\Ingestion\IngestionBatchCreationService;
 use App\Services\Ingestion\IngestionFileStorageService;
 use App\Services\Ingestion\IngestionGoogleOcrDraftService;
@@ -73,5 +75,38 @@ class CreateIngestionBatch extends CreateRecord
                 ->body(__('Skipped :count duplicate file(s) in this upload (same SHA-256 as another selected file).', ['count' => $this->skippedDuplicateUploads]))
                 ->send();
         }
+
+        $this->scheduleAutoDispatchOcrAfterCreate();
+    }
+
+    /**
+     * Queue OCR (+ AI when applicable) after the Filament create transaction commits.
+     * Avoids sync/null drivers so the HTTP request does not run OCR inline.
+     */
+    protected function scheduleAutoDispatchOcrAfterCreate(): void
+    {
+        if (! (bool) config('ingestion.auto_dispatch_ocr_after_create', true)) {
+            return;
+        }
+
+        $record = $this->getRecord();
+        if (! $record instanceof IngestionBatch || $record->file_count === 0) {
+            return;
+        }
+
+        if (in_array(config('queue.default'), ['sync', 'null'], true)) {
+            return;
+        }
+
+        $batchId = (int) $record->getKey();
+
+        DB::afterCommit(function () use ($batchId): void {
+            $batch = IngestionBatch::query()->find($batchId);
+            if ($batch === null || $batch->file_count === 0) {
+                return;
+            }
+
+            app(DispatchBatchOcrJobsAction::class)->executeThenQueueAi($batch);
+        });
     }
 }

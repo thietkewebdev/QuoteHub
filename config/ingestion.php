@@ -73,6 +73,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Auto-queue OCR (+ AI) after creating an ingestion batch
+    |--------------------------------------------------------------------------
+    |
+    | When true (default), a successful Filament "create batch" queues the same
+    | pipeline as "Run OCR & AI" after the create transaction commits.
+    | Skipped when QUEUE_CONNECTION is sync or null so the web request is not
+    | blocked by inline OCR. On Render, run a worker (e.g. php artisan queue:work).
+    |
+    */
+    'auto_dispatch_ocr_after_create' => filter_var(
+        env('INGESTION_AUTO_DISPATCH_OCR_AFTER_CREATE', true),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Google OCR (Document AI / Vision) for ingestion
     |--------------------------------------------------------------------------
     |
