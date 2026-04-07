@@ -10,8 +10,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
-    # No `&&` here: Render splits the string into argv and passes "&&" to artisan migrate.
-    preDeployCommand: bash scripts/render-predeploy.sh
+    preDeployCommand: composer render:predeploy
     envVars:
       - key: APP_ENV
         value: production
