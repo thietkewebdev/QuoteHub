@@ -3,6 +3,10 @@
 // Must match Filament FileUpload / ingestion max (Livewire temp upload validates before Filament sees the file).
 $ingestionMaxKb = max(1, (int) env('INGESTION_MAX_FILE_KB', 20_480));
 
+// When FILESYSTEM_DISK=s3 (R2), Livewire's default temp disk follows it — browser uploads then stream to R2 per chunk and can appear "stuck". Keep temp on local; Filament still moves files to INGESTION_STORAGE_DISK on save.
+$livewireTmpDisk = env('LIVEWIRE_TMP_DISK');
+$livewireTmpDisk = is_string($livewireTmpDisk) && $livewireTmpDisk !== '' ? $livewireTmpDisk : 'local';
+
 return [
 
     'class_namespace' => 'App\\Livewire',
@@ -14,8 +18,7 @@ return [
     'lazy_placeholder' => null,
 
     'temporary_file_upload' => [
-        // null = config('filesystems.default'). Set LIVEWIRE_TMP_DISK=local to stage on server when default is s3 (fewer R2 round-trips).
-        'disk' => env('LIVEWIRE_TMP_DISK'),
+        'disk' => $livewireTmpDisk,
         'rules' => ['required', 'file', 'max:'.$ingestionMaxKb],
         'directory' => env('LIVEWIRE_TMP_DIRECTORY'),
         'middleware' => env('LIVEWIRE_UPLOAD_MIDDLEWARE'),
