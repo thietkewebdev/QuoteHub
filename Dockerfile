@@ -2,7 +2,18 @@
 
 # Vite (Filament panel.css) imports vendor/filament/.../theme.css; .dockerignore excludes vendor,
 # so install Composer deps in an early stage and copy vendor into the Node build.
-FROM composer:2 AS composer
+# Use PHP 8.3 + intl/gd/zip so composer:install passes platform checks (Filament, PhpSpreadsheet).
+FROM php:8.3-cli-bookworm AS composer
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN chmod +x /usr/local/bin/install-php-extensions \
+    && install-php-extensions intl zip gd
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
