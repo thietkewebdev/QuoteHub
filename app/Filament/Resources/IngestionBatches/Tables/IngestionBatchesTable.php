@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\IngestionBatches\Tables;
 
+use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
+use App\Models\IngestionBatch;
+use App\Support\Locale\VietnamesePresentation;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -29,7 +33,7 @@ class IngestionBatchesTable
                     ->toggleable(),
                 TextColumn::make('received_at')
                     ->label(__('Received'))
-                    ->dateTime()
+                    ->dateTime(VietnamesePresentation::DATETIME_FORMAT)
                     ->sortable(),
                 TextColumn::make('status')
                     ->label(__('Status'))
@@ -49,6 +53,18 @@ class IngestionBatchesTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                Action::make('reviewQuotation')
+                    ->label(__('Review'))
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->url(fn (IngestionBatch $record): string => IngestionBatchResource::getUrl('reviewQuotation', ['record' => $record]))
+                    ->visible(fn (IngestionBatch $record): bool => $record->quotation()->doesntExist()
+                        && $record->aiExtraction()->exists()
+                        && in_array($record->status, [
+                            'ai_done',
+                            'review_pending',
+                            'review_rejected',
+                            'review_corrections_requested',
+                        ], true)),
                 EditAction::make(),
             ])
             ->toolbarActions([

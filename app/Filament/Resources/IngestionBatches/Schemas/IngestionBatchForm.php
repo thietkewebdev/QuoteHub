@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\IngestionBatches\Schemas;
 
+use App\Filament\Forms\SupplierSelect;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\Rules\In;
 
 class IngestionBatchForm
@@ -31,17 +31,13 @@ class IngestionBatchForm
                             ->required()
                             ->native(false)
                             ->rules([new In($channels)]),
-                        Select::make('supplier_id')
-                            ->label(__('Supplier'))
-                            ->relationship('supplier', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->nullable()
-                            ->rules(['nullable', new Exists('suppliers', 'id')]),
+                        SupplierSelect::make(),
                         DateTimePicker::make('received_at')
                             ->label(__('Received at'))
                             ->required()
                             ->seconds(false)
+                            ->native(false)
+                            ->displayFormat('d/m/Y H:i')
                             ->default(now()),
                         Textarea::make('notes')
                             ->label(__('Notes'))

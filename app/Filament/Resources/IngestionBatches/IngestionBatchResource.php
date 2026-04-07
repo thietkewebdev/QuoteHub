@@ -2,10 +2,13 @@
 
 namespace App\Filament\Resources\IngestionBatches;
 
+use App\Filament\Concerns\HasQuoteHubNavigationGroup;
 use App\Filament\Resources\IngestionBatches\Pages\CreateIngestionBatch;
 use App\Filament\Resources\IngestionBatches\Pages\EditIngestionBatch;
 use App\Filament\Resources\IngestionBatches\Pages\ListIngestionBatches;
+use App\Filament\Resources\IngestionBatches\Pages\ReviewIngestionQuotation;
 use App\Filament\Resources\IngestionBatches\Pages\ViewIngestionBatch;
+use App\Filament\Resources\IngestionBatches\Pages\ViewIngestionOcrCapture;
 use App\Filament\Resources\IngestionBatches\RelationManagers\FilesRelationManager;
 use App\Filament\Resources\IngestionBatches\Schemas\IngestionBatchForm;
 use App\Filament\Resources\IngestionBatches\Schemas\IngestionBatchInfolist;
@@ -16,17 +19,31 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use UnitEnum;
 
 class IngestionBatchResource extends Resource
 {
+    use HasQuoteHubNavigationGroup;
+
     protected static ?string $model = IngestionBatch::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Quote Hub';
-
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Báo giá tự động');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Ingestion batch');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Ingestion batches');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -56,6 +73,8 @@ class IngestionBatchResource extends Resource
             'index' => ListIngestionBatches::route('/'),
             'create' => CreateIngestionBatch::route('/create'),
             'view' => ViewIngestionBatch::route('/{record}'),
+            'ocrCapture' => ViewIngestionOcrCapture::route('/{record}/ocr-capture'),
+            'reviewQuotation' => ReviewIngestionQuotation::route('/{record}/review-quotation'),
             'edit' => EditIngestionBatch::route('/{record}/edit'),
         ];
     }

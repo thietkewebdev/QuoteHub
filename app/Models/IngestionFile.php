@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\OCR\OcrExtractionService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,11 @@ class IngestionFile extends Model
         $mime = (string) $this->mime_type;
 
         return $this->isRasterImage() || $mime === 'application/pdf';
+    }
+
+    public function supportsOcr(): bool
+    {
+        return app(OcrExtractionService::class)->supportsFile($this);
     }
 
     public function batch(): BelongsTo

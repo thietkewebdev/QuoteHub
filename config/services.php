@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    | OpenAI credentials for quotation extraction are primarily read from config/ai.php.
+    | This entry mirrors OPENAI_API_KEY for consistency with other third-party services.
+    */
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+    ],
+
+    /*
+    | Google Cloud Platform — Vision API + Document AI (OCR tier).
+    | GOOGLE_APPLICATION_CREDENTIALS: path to service account JSON (also standard for ADC).
+    */
+    'gcp' => [
+        'project_id' => env('GCP_PROJECT_ID'),
+        'location' => env('GCP_LOCATION', 'us'),
+        'document_ai_processor_id' => env('GCP_DOCUMENT_AI_PROCESSOR_ID'),
+        'credentials_path' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+    ],
+
 ];

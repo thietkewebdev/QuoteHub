@@ -5,6 +5,7 @@ namespace App\Filament\Resources\IngestionBatches\Pages;
 use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
 use App\Services\Ingestion\IngestionBatchCreationService;
 use App\Services\Ingestion\IngestionFileStorageService;
+use App\Services\Ingestion\IngestionGoogleOcrDraftService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -54,7 +55,13 @@ class CreateIngestionBatch extends CreateRecord
 
         DB::afterCommit(fn () => $fileService->deleteStagedRelativePaths($pathList));
 
-        return $batch->refresh();
+        $batch = $batch->refresh();
+
+        if ((bool) config('ingestion.google_ocr.enabled', true)) {
+            app(IngestionGoogleOcrDraftService::class)->captureForBatch($batch->loadMissing(['files']));
+        }
+
+        return $batch;
     }
 
     protected function afterCreate(): void

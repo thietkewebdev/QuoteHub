@@ -1,0 +1,61 @@
+# Blueprint for https://render.com — set APP_KEY, APP_URL, and API secrets in the dashboard (sync: false).
+databases:
+  - name: quotehub-db
+    databaseName: quotehub
+    user: quotehub
+
+services:
+  - type: web
+    name: quotehub
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /up
+    preDeployCommand: php artisan migrate --force --no-interaction && php artisan storage:link --force && php artisan optimize
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: quotehub-db
+          property: connectionString
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+
+  - type: worker
+    name: quotehub-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: quotehub-db
+          property: connectionString
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false

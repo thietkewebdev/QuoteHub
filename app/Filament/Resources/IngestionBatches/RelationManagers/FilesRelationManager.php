@@ -12,6 +12,9 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
+use Illuminate\View\ComponentAttributeBag;
+
+use function Filament\Support\generate_icon_html;
 
 class FilesRelationManager extends RelationManager
 {
@@ -38,14 +41,32 @@ class FilesRelationManager extends RelationManager
                     ->label(__('Preview'))
                     ->html()
                     ->formatStateUsing(function ($state, IngestionFile $record): HtmlString {
-                        if (! $record->isRasterImage()) {
-                            return new HtmlString('<span class="text-sm text-gray-400 dark:text-gray-500">—</span>');
+                        if (! $record->isRasterImage() || blank($record->storage_path)) {
+                            $icon = generate_icon_html(
+                                Heroicon::OutlinedDocument,
+                                attributes: new ComponentAttributeBag,
+                            );
+
+                            return new HtmlString(
+                                '<div class="flex h-20 max-w-[10rem] items-center justify-start text-gray-400 dark:text-gray-500" role="img" aria-label="'.e(__('File')).'">'
+                                .($icon?->toHtml() ?? '')
+                                .'</div>'
+                            );
                         }
 
+                        // Private storage: img URL is the auth-only inline route; the controller resolves the bytes from storage_path on the server.
                         $url = route('ingestion.files.inline', $record);
 
+                        $dimAttrs = '';
+                        if (filled($record->width) && filled($record->height)) {
+                            $dimAttrs = ' width="'.(int) $record->width.'" height="'.(int) $record->height.'"';
+                        }
+
                         return new HtmlString(
-                            '<img src="'.e($url).'" alt="" class="h-14 w-auto max-w-[7rem] rounded-md object-cover ring-1 ring-gray-950/5 dark:ring-white/10" loading="lazy" />'
+                            '<div class="flex h-20 max-w-[12rem] items-center justify-start">'
+                            .'<img src="'.e($url).'" alt=""'.$dimAttrs
+                            .' class="max-h-20 w-auto max-w-full object-contain rounded-md ring-1 ring-gray-950/10 dark:ring-white/10" loading="lazy" decoding="async" />'
+                            .'</div>'
                         );
                     }),
                 TextColumn::make('page_order')

@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 #[Fillable([
-    'supplier_id',
     'brand_id',
     'product_category_id',
     'sku',
@@ -22,11 +22,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Product extends Model
 {
-    public function supplier(): BelongsTo
-    {
-        return $this->belongsTo(Supplier::class);
-    }
-
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
@@ -40,6 +35,36 @@ class Product extends Model
     public function aliases(): HasMany
     {
         return $this->hasMany(ProductAlias::class);
+    }
+
+    public function mappedQuotationItems(): HasMany
+    {
+        return $this->hasMany(QuotationItem::class, 'mapped_product_id');
+    }
+
+    public function purchaseOrderLines(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderLine::class, 'product_id');
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product): void {
+            if (! filled($product->name) || filled($product->slug)) {
+                return;
+            }
+
+            $base = Str::slug($product->name) ?: 'product';
+            $slug = $base;
+            $n = 0;
+            while (static::query()
+                ->where('slug', $slug)
+                ->when($product->exists, fn ($q) => $q->whereKeyNot($product->getKey()))
+                ->exists()) {
+                $slug = $base.'-'.(++$n);
+            }
+            $product->slug = $slug;
+        });
     }
 
     protected function casts(): array

@@ -8,8 +8,14 @@
     "require": {
         "php": "^8.3",
         "filament/filament": "^4.9",
+        "google/cloud-document-ai": "^2.6",
+        "google/cloud-vision": "^2.2",
         "laravel/framework": "^13.0",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "maatwebsite/excel": "^3.1",
+        "phiki/phiki": "^2.2",
+        "smalot/pdfparser": "^2.12",
+        "thiagoalessio/tesseract_ocr": "^2.13"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -47,6 +53,15 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "production:optimize": [
+            "@php artisan optimize"
+        ],
+        "production:clear": [
+            "@php artisan optimize:clear"
+        ],
+        "production:migrate": [
+            "@php artisan migrate --force"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
