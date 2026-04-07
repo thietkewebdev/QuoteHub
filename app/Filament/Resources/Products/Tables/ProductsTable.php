@@ -2,8 +2,7 @@
 
 namespace App\Filament\Resources\Products\Tables;
 
-use App\Models\Quotation;
-use App\Models\QuotationItem;
+use App\Services\Quotation\PriceHistoryQuery;
 use App\Support\Locale\VietnamesePresentation;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -22,15 +21,7 @@ class ProductsTable
                 return $query
                     ->with(['brand', 'category'])
                     ->addSelect([
-                        'lowest_visible_unit_price' => QuotationItem::query()
-                            ->selectRaw('MIN(quotation_items.unit_price)')
-                            ->whereColumn('quotation_items.mapped_product_id', 'products.id')
-                            ->whereHas('quotation', fn (Builder $q2): Builder => $q2->whereNotNull('approved_at'))
-                            ->where(function (Builder $q2): void {
-                                $q2->whereHas('quotation', fn (Builder $q3): Builder => $q3->where('entry_source', Quotation::ENTRY_SOURCE_MANUAL))
-                                    ->orWhereHas('quotation', fn (Builder $q3): Builder => $q3->where('entry_source', Quotation::ENTRY_SOURCE_AI_INGESTION)
-                                        ->whereHas('ingestionBatch'));
-                            }),
+                        'lowest_visible_unit_price' => PriceHistoryQuery::lowestVisibleUnitPricePerProductSubquery(),
                     ]);
             })
             ->columns([
@@ -57,7 +48,11 @@ class ProductsTable
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state))
                     ->placeholder('—')
                     ->alignment(Alignment::End)
-                    ->sortable(),
+                    ->sortable(query: function (Builder $query, string $direction): void {
+                        $dir = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+                        $sub = PriceHistoryQuery::lowestVisibleUnitPricePerProductSubquery();
+                        $query->orderByRaw('('.$sub->toSql().') '.$dir, $sub->getBindings());
+                    }),
                 TextColumn::make('updated_at')
                     ->label(__('Last updated'))
                     ->dateTime()
