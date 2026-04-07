@@ -13,15 +13,15 @@
     }
 @endphp
 
-<div class="fi-quotation-detail-layout w-full min-w-0 max-w-none space-y-8 md:space-y-10">
-    {{-- Header --}}
+<div class="fi-quotation-detail-layout w-full min-w-0 max-w-none space-y-6">
+    {{-- Header: 3 columns on md+ --}}
     <div class="rounded-xl border border-gray-200/90 bg-white p-4 shadow-md shadow-gray-900/[0.06] ring-1 ring-gray-950/5 transition-shadow duration-200 hover:shadow-lg hover:shadow-gray-900/[0.08] dark:border-white/10 dark:bg-gray-900 dark:shadow-none dark:ring-white/10 sm:p-6">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-            <div class="min-w-0 flex-1 space-y-2 sm:space-y-2.5">
-                <h1 class="text-xl font-bold tracking-tight text-gray-950 sm:text-2xl dark:text-white">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
+            <div class="min-w-0 space-y-2 sm:space-y-2.5">
+                <h1 class="text-left text-xl font-bold tracking-tight text-gray-950 sm:text-2xl dark:text-white">
                     {{ __('Quotation #:id', ['id' => $q->getKey()]) }}
                 </h1>
-                <p class="text-sm text-gray-600 sm:text-base dark:text-gray-400">
+                <p class="text-left text-sm text-gray-600 sm:text-base dark:text-gray-400">
                     {{ filled($q->supplier_name) ? $q->supplier_name : '—' }}
                 </p>
                 <div class="flex flex-wrap items-center gap-2 pt-0.5">
@@ -29,14 +29,30 @@
                         {{ $q->approvalStatusLabel() }}
                     </x-filament::badge>
                     @if (filled($q->supplier_quote_number))
-                        <span class="text-xs text-gray-500 sm:text-sm dark:text-gray-400">
+                        <span class="text-left text-xs text-gray-500 sm:text-sm dark:text-gray-400">
                             {{ __('Supplier quote #') }}: {{ $q->supplier_quote_number }}
                         </span>
                     @endif
                 </div>
             </div>
-            <div class="flex w-full shrink-0 flex-col items-stretch gap-3 border-t border-gray-100 pt-4 sm:items-start sm:border-t-0 sm:pt-0 lg:w-auto lg:items-end lg:border-t-0 lg:pt-0 dark:border-white/10">
-                <div class="text-center sm:text-left lg:text-right">
+            <div class="min-w-0 space-y-3 border-t border-gray-100 pt-4 text-left md:border-t-0 md:border-l md:border-gray-100 md:pl-8 md:pt-0 dark:border-white/10">
+                <dl class="space-y-2.5 text-sm">
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">{{ __('Quote date') }}</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">
+                            {{ $q->quote_date?->format(VietnamesePresentation::DATE_FORMAT) ?? '—' }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">{{ __('Approved at') }}</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">
+                            {{ $q->approved_at?->format(VietnamesePresentation::DATETIME_FORMAT) ?? '—' }}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="flex min-w-0 flex-col items-stretch gap-3 border-t border-gray-100 pt-4 text-left md:border-t-0 md:border-l md:border-gray-100 md:pl-8 md:pt-0 dark:border-white/10 md:items-end md:text-right">
+                <div>
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {{ __('Total amount') }}
                     </p>
@@ -44,7 +60,8 @@
                         {{ VietnamesePresentation::vnd($financial['total']) ?? '—' }}
                     </p>
                 </div>
-                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-start lg:justify-end">
+                <div class="flex w-full flex-col gap-2 md:items-end">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-start md:justify-end">
                     <x-filament::button
                         class="w-full justify-center !font-semibold shadow-sm transition-all duration-150 hover:!shadow-md active:scale-[0.98] sm:w-auto"
                         color="success"
@@ -84,6 +101,7 @@
                     >
                         {{ __('Delete') }}
                     </x-filament::button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,9 +157,9 @@
         </div>
     </div>
 
-    <div class="grid w-full min-w-0 grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
+    <div class="grid w-full min-w-0 grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
         {{-- Main column --}}
-        <div class="flex min-w-0 flex-col gap-8 lg:col-span-8">
+        <div class="flex min-w-0 flex-col gap-6 lg:col-span-8">
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {{-- Supplier card --}}
                 <div class="rounded-xl border border-gray-200/90 bg-white p-4 shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-950/5 transition-shadow duration-200 hover:shadow-lg hover:shadow-gray-900/[0.07] dark:border-white/10 dark:bg-gray-900 dark:shadow-none dark:ring-white/10 sm:p-5 sm:col-span-2 lg:col-span-1">
@@ -228,21 +246,23 @@
                     <h2 class="text-sm font-semibold text-gray-900 sm:text-base dark:text-white">{{ __('Line items') }}</h2>
                 </div>
                 <div class="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-                    <table class="w-full min-w-[720px] text-left text-sm">
+                    <table class="w-full min-w-[880px] text-left text-sm">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50/90 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-400">
-                                <th class="px-3 py-2.5 sm:px-5 sm:py-3">{{ __('Product') }}</th>
-                                <th class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Quantity') }}</th>
-                                <th class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Unit price') }}</th>
-                                <th class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('VAT %') }}</th>
-                                <th class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Total') }}</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2.5 text-right sm:px-3 sm:py-3">{{ __('Actions') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-left sm:px-5 sm:py-3">{{ __('Product') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Quantity') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Unit price') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('VAT %') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('VAT amount') }}</th>
+                                <th scope="col" class="px-3 py-2.5 text-right sm:px-5 sm:py-3">{{ __('Amount (incl. VAT)') }}</th>
+                                <th scope="col" class="w-px whitespace-nowrap px-2 py-2.5 text-right sm:px-3 sm:py-3">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-white/10">
                             @forelse ($q->items as $item)
                                 @php
                                     $incl = QuotationLinePresentation::lineTotalIncludingVat($item->line_total, $item->vat_percent);
+                                    $lineVat = QuotationLinePresentation::lineVatAmount($item->line_total, $item->vat_percent);
                                 @endphp
                                 <tr
                                     id="quotation-line-{{ $item->getKey() }}"
@@ -283,6 +303,9 @@
                                     </td>
                                     <td class="px-3 py-3 text-right tabular-nums text-gray-800 sm:px-5 sm:py-4 dark:text-gray-200">
                                         {{ QuotationLinePresentation::percent($item->vat_percent) ?? '—' }}
+                                    </td>
+                                    <td class="px-3 py-3 text-right tabular-nums text-gray-800 sm:px-5 sm:py-4 dark:text-gray-200">
+                                        {{ VietnamesePresentation::vnd($lineVat) ?? '—' }}
                                     </td>
                                     <td class="px-3 py-3 text-right text-sm font-bold tabular-nums text-gray-950 sm:px-5 sm:py-4 sm:text-base dark:text-white">
                                         {{ VietnamesePresentation::vnd($incl) ?? '—' }}
@@ -328,7 +351,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500 sm:px-5 dark:text-gray-400">
+                                    <td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500 sm:px-5 dark:text-gray-400">
                                         {{ __('No line items.') }}
                                     </td>
                                 </tr>

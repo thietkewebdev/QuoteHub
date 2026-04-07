@@ -66,4 +66,25 @@ final class QuotationLinePresentation
 
         return round($excl * (1 + $vat / 100), 4);
     }
+
+    /**
+     * VAT monetary amount for the line: line_total (excl.) × VAT% / 100.
+     *
+     * @param  mixed  $lineTotalExcl
+     * @param  mixed  $vatPercent
+     */
+    public static function lineVatAmount($lineTotalExcl, $vatPercent): ?float
+    {
+        if ($lineTotalExcl === null || $lineTotalExcl === '' || ! is_numeric($lineTotalExcl)) {
+            return null;
+        }
+
+        $excl = (float) $lineTotalExcl;
+
+        if ($vatPercent === null || $vatPercent === '' || ! is_numeric($vatPercent)) {
+            return null;
+        }
+
+        return round($excl * ((float) $vatPercent) / 100, 4);
+    }
 }
