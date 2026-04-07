@@ -10,23 +10,6 @@ final class VietnameseExcelHeaders
     /**
      * @return list<string>
      */
-    public static function quotationLibrary(): array
-    {
-        return [
-            'Tên nhà cung cấp',
-            'Số báo giá (NCC)',
-            'Ngày báo giá',
-            'Tổng tiền',
-            'Chính sách giá',
-            'Hiệu lực đến',
-            'Thời điểm phê duyệt',
-            'ID người phê duyệt',
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
     public static function approvedQuotationItems(): array
     {
         return [

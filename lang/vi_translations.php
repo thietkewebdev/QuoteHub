@@ -196,8 +196,8 @@ return [
     'Until' => 'Đến',
     'Quote date from' => 'Ngày BG từ',
     'Quote date until' => 'Ngày BG đến',
-    'Export list (Excel)' => 'Xuất danh sách (Excel)',
-    'Export approved lines (Excel)' => 'Xuất dòng đã duyệt (Excel)',
+    'Export (Excel)' => 'Xuất Excel',
+    'Only lines from approved quotations are exported. The current table filters and search still limit which quotations are included.' => 'Chỉ xuất các dòng thuộc báo giá đã duyệt. Bộ lọc và ô tìm kiếm hiện tại của bảng vẫn giới hạn báo giá được đưa vào file.',
 
     'Quotation header' => 'Phần đầu báo giá',
     'Supplier, dates, and contact — totals and notes below.' => 'NCC, ngày và liên hệ — tổng tiền và ghi chú bên dưới.',
@@ -283,7 +283,6 @@ return [
     'All lines' => 'Mọi dòng',
     'With model' => 'Có model',
     'Without model' => 'Không model',
-    'Export (Excel)' => 'Xuất (Excel)',
 
     'Supplier recall' => 'Thu hồi / chuẩn hóa NCC',
     'Supplier recall & catalog sync' => 'Thu hồi NCC & đồng bộ danh mục',

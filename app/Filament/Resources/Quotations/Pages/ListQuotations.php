@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Quotations\Pages;
 
 use App\Exports\ApprovedQuotationItemsExport;
-use App\Exports\QuotationsLibraryExport;
 use App\Filament\Resources\Quotations\QuotationResource;
 use App\Models\QuotationItem;
 use Filament\Actions\Action;
@@ -28,21 +27,10 @@ class ListQuotations extends ListRecords
     protected function getTableHeaderActions(): array
     {
         return [
-            Action::make('exportQuotationsLibraryExcel')
-                ->label(__('Export list (Excel)'))
-                ->icon(Heroicon::OutlinedArrowDownTray)
-                ->modalDescription(__('Exports the same rows as the table after active filters and search.'))
-                ->action(function (): BinaryFileResponse {
-                    return Excel::download(
-                        new QuotationsLibraryExport($this->getTableQueryForExport()->clone()),
-                        'quotations-library-'.now()->format('Ymd-His').'.xlsx',
-                    );
-                })
-                ->visible(fn (): bool => QuotationResource::canViewAny()),
             Action::make('exportApprovedQuotationItemsExcel')
-                ->label(__('Export approved lines (Excel)'))
+                ->label(__('Export (Excel)'))
                 ->icon(Heroicon::OutlinedArrowDownTray)
-                ->modalDescription(__('Uses the filtered quotation list: only lines whose quotation is approved are included.'))
+                ->modalDescription(__('Only lines from approved quotations are exported. The current table filters and search still limit which quotations are included.'))
                 ->action(function (): BinaryFileResponse {
                     $quotationIdsQuery = $this->getTableQueryForExport()->clone()->select('quotations.id');
 
