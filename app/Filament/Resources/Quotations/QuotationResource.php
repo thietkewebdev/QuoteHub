@@ -6,7 +6,6 @@ use App\Filament\Concerns\HasQuoteHubNavigationGroup;
 use App\Filament\Resources\Quotations\Pages\EditQuotation;
 use App\Filament\Resources\Quotations\Pages\ListQuotations;
 use App\Filament\Resources\Quotations\Pages\ViewQuotation;
-use App\Filament\Resources\Quotations\RelationManagers\QuotationItemsRelationManager;
 use App\Filament\Resources\Quotations\RelationManagers\QuotationPurchaseOrdersRelationManager;
 use App\Filament\Resources\Quotations\Schemas\QuotationForm;
 use App\Filament\Resources\Quotations\Schemas\QuotationInfolist;
@@ -63,7 +62,6 @@ class QuotationResource extends Resource
     public static function getRelations(): array
     {
         return [
-            QuotationItemsRelationManager::class,
             QuotationPurchaseOrdersRelationManager::class,
         ];
     }
