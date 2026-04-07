@@ -4,6 +4,7 @@ namespace App\Services\OCR;
 
 use App\Models\IngestionFile;
 use App\Support\Ingestion\IngestionFileLocalMaterializer;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -28,6 +29,8 @@ class OcrExtractionService
         if ($absolutePath === null) {
             throw new OcrExtractionException(__('File is missing from storage.'));
         }
+
+        $this->logMaterializedSizeMismatch($ingestionFile, $absolutePath);
 
         try {
             $payload = $this->ocrRouter->extract($absolutePath);
@@ -159,5 +162,29 @@ class OcrExtractionService
         }
 
         return round(array_sum($scores) / count($scores), 6);
+    }
+
+    /**
+     * On Render, worker pulls PDFs from R2/S3 into a temp file; a mismatch often means wrong bucket/credentials or a bad upload.
+     */
+    private function logMaterializedSizeMismatch(IngestionFile $ingestionFile, string $absolutePath): void
+    {
+        $expected = $ingestionFile->file_size;
+        if ($expected === null || (int) $expected <= 0) {
+            return;
+        }
+
+        $actual = @filesize($absolutePath);
+        if (! is_int($actual) || $actual === (int) $expected) {
+            return;
+        }
+
+        Log::warning('ingestion.ocr.materialized_size_mismatch', [
+            'ingestion_file_id' => $ingestionFile->id,
+            'ingestion_batch_id' => $ingestionFile->ingestion_batch_id,
+            'storage_path' => $ingestionFile->storage_path,
+            'expected_bytes' => (int) $expected,
+            'materialized_bytes' => $actual,
+        ]);
     }
 }
