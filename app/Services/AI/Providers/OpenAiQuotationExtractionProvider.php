@@ -144,12 +144,15 @@ class OpenAiQuotationExtractionProvider implements QuotationExtractionProviderIn
     private function callChatCompletions(string $system, string $user): array
     {
         $apiKey = trim((string) (config('quotation_ai.openai.api_key') ?: config('services.openai.api_key') ?: ''));
+        $apiKey = preg_replace('/^\x{FEFF}/u', '', $apiKey) ?? $apiKey;
 
         if ($apiKey === '') {
             throw new InvalidArgumentException(
                 __('OpenAI API key is missing. Set OPENAI_API_KEY, or use QUOTATION_AI_DRIVER=mock for local testing.')
             );
         }
+
+        $this->assertOpenAiApiKeyShape($apiKey);
 
         $baseUrl = rtrim((string) config('quotation_ai.openai.base_url', 'https://api.openai.com/v1'), '/');
         $timeout = (int) config('quotation_ai.openai.timeout', 120);
@@ -192,5 +195,23 @@ class OpenAiQuotationExtractionProvider implements QuotationExtractionProviderIn
         }
 
         return ModelJsonContentDecoder::decodeObject($content);
+    }
+
+    /**
+     * Fail fast with a clear message when the key is obviously mis-pasted (e.g. log text, wrong env on Render).
+     */
+    private function assertOpenAiApiKeyShape(string $apiKey): void
+    {
+        if (preg_match('/\s/s', $apiKey) === 1) {
+            throw new InvalidArgumentException(
+                'OPENAI_API_KEY must be a single line with no spaces or newlines. Check Render / .env and redeploy after changing secrets.'
+            );
+        }
+
+        if (! str_starts_with($apiKey, 'sk-')) {
+            throw new InvalidArgumentException(
+                'OPENAI_API_KEY must start with "sk-". Paste only the key from https://platform.openai.com/api-keys . On Render, set it on both Web and Worker, then redeploy so config cache is rebuilt.'
+            );
+        }
     }
 }
