@@ -63,7 +63,7 @@ class QuotationInfolist
                     ])
                     ->columns(2),
                 Section::make(__('Policy & status'))
-                    ->description(__('Pricing policy tags, validity window, and approval lifecycle.'))
+                    ->description(__('Approval lifecycle.'))
                     ->icon(Heroicon::OutlinedTag)
                     ->iconColor('gray')
                     ->schema([
@@ -72,17 +72,6 @@ class QuotationInfolist
                             ->badge()
                             ->color(fn (Quotation $record): string => $record->approvalStatusColor())
                             ->state(fn (Quotation $record): string => $record->approvalStatusLabel()),
-                        TextEntry::make('pricing_policy')
-                            ->label(__('Pricing policy'))
-                            ->badge()
-                            ->color(fn (Quotation $record): string => $record->pricingPolicyBadgeColor())
-                            ->state(fn (Quotation $record): string => $record->pricingPolicyLabel()),
-                        TextEntry::make('valid_until')
-                            ->label(__('Valid until'))
-                            ->icon(Heroicon::OutlinedCalendarDays)
-                            ->iconColor('gray')
-                            ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT))
-                            ->placeholder('—'),
                         TextEntry::make('approved_at')
                             ->label(__('Approved at'))
                             ->icon(Heroicon::OutlinedCheckCircle)

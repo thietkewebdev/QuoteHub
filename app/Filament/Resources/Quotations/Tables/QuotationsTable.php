@@ -48,17 +48,6 @@ class QuotationsTable
                     ->getStateUsing(fn (Quotation $record): string => $record->approvalStatusLabel())
                     ->badge()
                     ->color(fn (Quotation $record): string => $record->approvalStatusColor()),
-                TextColumn::make('pricing_policy')
-                    ->label(__('Pricing policy'))
-                    ->getStateUsing(fn (Quotation $record): string => $record->pricingPolicyLabel())
-                    ->badge()
-                    ->color(fn (Quotation $record): string => $record->pricingPolicyBadgeColor())
-                    ->sortable(),
-                TextColumn::make('valid_until')
-                    ->label(__('Valid until'))
-                    ->sortable()
-                    ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT))
-                    ->placeholder('—'),
                 TextColumn::make('supplier_name')
                     ->label(__('Supplier name'))
                     ->searchable()
@@ -176,15 +165,6 @@ class QuotationsTable
                         false: fn (Builder $query): Builder => $query->whereNull('approved_at'),
                         blank: fn (Builder $query): Builder => $query,
                     ),
-                SelectFilter::make('pricing_policy')
-                    ->label(__('Pricing policy'))
-                    ->options(Quotation::pricingPolicyOptions()),
-                Filter::make('expired_valid_until')
-                    ->label(__('Expired (valid until)'))
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query
-                        ->whereNotNull('valid_until')
-                        ->whereDate('valid_until', '<', now()->toDateString())),
             ])
             ->recordActions([
                 ViewAction::make(),

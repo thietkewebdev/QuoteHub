@@ -19,12 +19,16 @@ class QuotationForm
                 Select::make('pricing_policy')
                     ->label(__('Pricing policy'))
                     ->options(Quotation::pricingPolicyOptions())
-                    ->required()
-                    ->native(false),
+                    ->default(Quotation::PRICING_POLICY_STANDARD)
+                    ->native(false)
+                    ->hidden()
+                    ->dehydrated(),
                 DatePicker::make('valid_until')
                     ->label(__('Valid until'))
                     ->native(false)
-                    ->displayFormat(VietnamesePresentation::DATE_FORMAT),
+                    ->displayFormat(VietnamesePresentation::DATE_FORMAT)
+                    ->hidden()
+                    ->dehydrated(),
                 Textarea::make('notes')
                     ->label(__('Notes'))
                     ->rows(4)
