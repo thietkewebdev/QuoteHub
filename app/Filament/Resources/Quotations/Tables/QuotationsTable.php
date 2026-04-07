@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Quotations\Tables;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\Locale\VietnamesePresentation;
+use App\Support\Quotation\QuotationLinePresentation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -83,14 +84,52 @@ class QuotationsTable
                     ->listWithLineBreaks()
                     ->alignment(Alignment::End)
                     ->placeholder('—'),
-                TextColumn::make('quote_date')
-                    ->label(__('Quote date'))
-                    ->sortable()
-                    ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT)),
+                TextColumn::make('line_quantities')
+                    ->label(__('Quantity'))
+                    ->getStateUsing(function (Quotation $record): array {
+                        if ($record->items->isEmpty()) {
+                            return ['—'];
+                        }
+
+                        return $record->items
+                            ->map(function (QuotationItem $item): string {
+                                $q = QuotationLinePresentation::quantity($item->quantity);
+
+                                return $q !== null && $q !== '' ? $q : '—';
+                            })
+                            ->values()
+                            ->all();
+                    })
+                    ->listWithLineBreaks()
+                    ->alignment(Alignment::End)
+                    ->placeholder('—'),
+                TextColumn::make('line_amounts_incl_vat')
+                    ->label(__('Amount (incl. VAT)'))
+                    ->getStateUsing(function (Quotation $record): array {
+                        if ($record->items->isEmpty()) {
+                            return ['—'];
+                        }
+
+                        return $record->items
+                            ->map(function (QuotationItem $item): string {
+                                $incl = QuotationLinePresentation::lineTotalIncludingVat($item->line_total, $item->vat_percent);
+
+                                return VietnamesePresentation::vnd($incl) ?? '—';
+                            })
+                            ->values()
+                            ->all();
+                    })
+                    ->listWithLineBreaks()
+                    ->alignment(Alignment::End)
+                    ->placeholder('—'),
                 TextColumn::make('total_amount')
                     ->label(__('Total'))
                     ->sortable()
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state)),
+                TextColumn::make('quote_date')
+                    ->label(__('Quote date'))
+                    ->sortable()
+                    ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT)),
             ])
             ->defaultSort('approved_at', 'desc')
             ->filters([

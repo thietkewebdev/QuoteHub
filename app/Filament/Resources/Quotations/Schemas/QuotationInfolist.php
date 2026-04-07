@@ -31,12 +31,6 @@ class QuotationInfolist
                             ->iconColor('gray')
                             ->weight(FontWeight::Medium)
                             ->placeholder('—'),
-                        TextEntry::make('quote_date')
-                            ->label(__('Quote date'))
-                            ->icon(Heroicon::OutlinedCalendarDays)
-                            ->iconColor('gray')
-                            ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT))
-                            ->placeholder('—'),
                         TextEntry::make('contact_person')
                             ->label(__('Contact person'))
                             ->icon(Heroicon::OutlinedUserCircle)
@@ -55,6 +49,12 @@ class QuotationInfolist
                             ->alignEnd()
                             ->weight(FontWeight::SemiBold)
                             ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state))
+                            ->placeholder('—'),
+                        TextEntry::make('quote_date')
+                            ->label(__('Quote date'))
+                            ->icon(Heroicon::OutlinedCalendarDays)
+                            ->iconColor('gray')
+                            ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT))
                             ->placeholder('—'),
                         TextEntry::make('notes')
                             ->label(__('Notes'))

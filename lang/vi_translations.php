@@ -154,6 +154,7 @@ return [
     'Unit price (excl. VAT)' => 'Đơn giá (chưa VAT)',
     'Line subtotal (excl. VAT)' => 'Tạm tính dòng (chưa VAT)',
     'Pre-tax row total; adjust if it does not match quantity × unit price.' => 'Tổng dòng trước thuế; chỉnh nếu không khớp số lượng × đơn giá.',
+    'Amount (incl. VAT)' => 'Thành tiền (gồm VAT)',
     'VAT %' => 'VAT %',
     'VAT amount' => 'Tiền VAT',
     'Filled from VAT % (rounded to whole đồng); edit to match invoice rounding.' => 'Tự điền từ % VAT (làm tròn đồng); sửa tay cho khớp làm tròn trên hóa đơn.',

@@ -39,6 +39,7 @@
     "All approved quotations already have a supplier_id, or none have supplier_name text.": "Mọi báo giá đã duyệt đã có supplier_id, hoặc không có supplier_name.",
     "All lines": "Mọi dòng",
     "All selected files were duplicates of another file in this upload.": "Mọi tệp chọn đều trùng với tệp khác trong lần tải này.",
+    "Amount (incl. VAT)": "Thành tiền (gồm VAT)",
     "Apply to line items": "Áp dụng cho dòng hàng",
     "Approval": "Phê duyệt",
     "Approval date": "Ngày phê duyệt",
