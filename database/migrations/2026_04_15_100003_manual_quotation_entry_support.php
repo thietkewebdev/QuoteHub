@@ -6,18 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * PostgreSQL implements UNIQUE as a constraint; DROP INDEX on the backing index fails (2BP01).
+     * dropUnique() emits the correct DROP CONSTRAINT / dialect-specific SQL.
+     */
     private function dropUniqueIndexOnColumn(string $table, string $column): void
     {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+
+        $hasUnique = false;
         foreach (Schema::getIndexes($table) as $index) {
             if (($index['unique'] ?? false)
                 && ! ($index['primary'] ?? false)
                 && ($index['columns'] ?? []) === [$column]) {
-                Schema::table($table, function (Blueprint $blueprint) use ($index): void {
-                    $blueprint->dropIndex($index['name']);
-                });
+                $hasUnique = true;
                 break;
             }
         }
+
+        if (! $hasUnique) {
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $blueprint) use ($column): void {
+            $blueprint->dropUnique([$column]);
+        });
     }
 
     public function up(): void
