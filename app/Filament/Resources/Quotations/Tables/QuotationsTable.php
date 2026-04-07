@@ -6,6 +6,7 @@ use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\Locale\VietnamesePresentation;
 use App\Support\Quotation\QuotationLinePresentation;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -13,6 +14,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
@@ -206,9 +208,15 @@ class QuotationsTable
                     ),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
+                    DeleteAction::make()
+                        ->color('danger'),
+                ])
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->tooltip(__('Actions'))
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

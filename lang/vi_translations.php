@@ -162,6 +162,7 @@ return [
     'Line total (incl. VAT)' => 'Tổng dòng (gồm VAT)',
     'Specs' => 'Thông số',
     'Line item' => 'Dòng hàng',
+    'Actions' => 'Thao tác',
     'Add line' => 'Thêm dòng',
 
     'Review quotation' => 'Duyệt báo giá',

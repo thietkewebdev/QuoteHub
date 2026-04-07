@@ -26,6 +26,7 @@
     "AI processing": "Đang xử lý AI",
     "AI retry failed": "Chạy lại AI thất bại",
     "AI retry is only available for failed runs or low-confidence extractions.": "Chạy lại AI chỉ khi chạy thất bại hoặc độ tin thấp.",
+    "Actions": "Thao tác",
     "Active products that have at least one mapped approved line": "Sản phẩm đang active có ít nhất một dòng đã map trên báo giá đã duyệt",
     "Add at least one file.": "Thêm ít nhất một tệp.",
     "Add at least one line item with a product name.": "Thêm ít nhất một dòng có tên sản phẩm.",
