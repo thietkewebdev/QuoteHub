@@ -53,6 +53,7 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
         return $table
             ->heading(__('Quick product price lookup'))
             ->description(__('Search by product name or SKU. Shows the lowest ex-VAT unit price on record for each matching catalog product (same rules as price history).'))
+            ->searchable()
             ->searchPlaceholder(__('Name or SKU…'))
             ->headerActions([
                 Action::make('openPriceHistory')

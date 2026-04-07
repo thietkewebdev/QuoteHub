@@ -6,6 +6,7 @@ namespace App\Filament\Widgets\Reporting;
 
 use App\Filament\Resources\Products\ProductResource;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
+use App\Models\PurchaseOrderLine;
 use App\Services\Operations\ProcurementReportingQueries;
 use App\Support\Locale\VietnamesePresentation;
 use Filament\Support\Enums\FontFamily;
@@ -52,6 +53,7 @@ final class ProductLastPurchaseFromPoWidget extends TableWidget
         return $table
             ->heading(__('Last purchase from PO (by product & supplier)'))
             ->description(__('For each product–supplier pair, shows the most recent PO line unit price and order date. Search by product name or SKU.'))
+            ->searchable()
             ->searchPlaceholder(__('Product name or SKU…'))
             ->emptyStateHeading(__('No purchase lines yet'))
             ->emptyStateDescription(__('Create POs with catalog products on lines to build this report, or adjust your search.'))
@@ -63,7 +65,7 @@ final class ProductLastPurchaseFromPoWidget extends TableWidget
                 );
 
                 return collect($rows)->mapWithKeys(function (array $row): array {
-                    /** @var \App\Models\PurchaseOrderLine $line */
+                    /** @var PurchaseOrderLine $line */
                     $line = $row['line'];
 
                     return [
