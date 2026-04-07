@@ -68,7 +68,7 @@ final class ProductMappingSuggestionService
         $products = Product::query()
             ->select(['id', 'name', 'sku'])
             ->where('is_active', true)
-            ->whereRaw('LOWER(TRIM(COALESCE(sku, ""))) = ?', [$normModel])
+            ->whereRaw("LOWER(TRIM(COALESCE(sku, ''))) = ?", [$normModel])
             ->get();
 
         foreach ($products as $product) {
