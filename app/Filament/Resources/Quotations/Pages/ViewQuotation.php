@@ -14,6 +14,7 @@ use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -30,6 +31,35 @@ class ViewQuotation extends ViewRecord
     use InteractsWithQuotationDetailLayout;
 
     protected static string $resource = QuotationResource::class;
+
+    /**
+     * Actions triggered via mountAction() from the custom quotation layout must not use Action::hidden(),
+     * because Filament treats hidden actions as disabled and mountAction() then exits without opening a modal.
+     * Those actions stay registered for Livewire but are omitted from the default page header bar.
+     *
+     * @return array<Action|ActionGroup>
+     */
+    public function getCachedHeaderActions(): array
+    {
+        $omitFromHeaderBar = [
+            'createPurchaseOrder',
+            'cloneToManualDraft',
+            'delete',
+            'mapQuotationLineItem',
+            'unlinkQuotationLineItem',
+        ];
+
+        return array_values(array_filter(
+            parent::getCachedHeaderActions(),
+            function (Action|ActionGroup $action) use ($omitFromHeaderBar): bool {
+                if ($action instanceof ActionGroup) {
+                    return true;
+                }
+
+                return ! in_array($action->getName(), $omitFromHeaderBar, true);
+            },
+        ));
+    }
 
     public function mount(int|string $record): void
     {
@@ -84,13 +114,11 @@ class ViewQuotation extends ViewRecord
         return [
             EditAction::make()
                 ->hidden(),
-            DeleteAction::make()
-                ->hidden(),
+            DeleteAction::make(),
             Action::make('createPurchaseOrder')
                 ->label(__('Create purchase order'))
                 ->icon(Heroicon::OutlinedShoppingBag)
                 ->color('success')
-                ->hidden()
                 ->requiresConfirmation()
                 ->modalHeading(__('Create purchase order from this quotation?'))
                 ->modalDescription(function (): string {
@@ -120,7 +148,6 @@ class ViewQuotation extends ViewRecord
                 ->label(__('Clone to manual draft'))
                 ->icon(Heroicon::OutlinedDocumentDuplicate)
                 ->color('gray')
-                ->hidden()
                 ->requiresConfirmation()
                 ->modalHeading(__('Create manual quotation draft?'))
                 ->modalDescription(__('Copies supplier, header fields, and line items (including catalog product links) into a new manual-entry draft. Approval and batch/AI data are not copied.'))
@@ -144,7 +171,6 @@ class ViewQuotation extends ViewRecord
     {
         return Action::make('mapQuotationLineItem')
             ->label(__('Map'))
-            ->hidden()
             ->modalHeading(function (Action $action): string {
                 $item = $this->resolveQuotationItemForMappingAction($action);
 
@@ -196,7 +222,6 @@ class ViewQuotation extends ViewRecord
     {
         return Action::make('unlinkQuotationLineItem')
             ->label(__('Unlink'))
-            ->hidden()
             ->color('danger')
             ->modalHeading(__('Unlink product mapping?'))
             ->modalDescription(__('The line stays on the quotation; only the catalog product link is removed.'))
