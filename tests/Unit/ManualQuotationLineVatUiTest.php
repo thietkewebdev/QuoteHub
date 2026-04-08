@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Support\Locale\VietnameseMoneyInput;
 use App\Support\Quotation\ManualQuotationLineVatUi;
 use PHPUnit\Framework\TestCase;
 
@@ -24,9 +25,9 @@ class ManualQuotationLineVatUiTest extends TestCase
 
         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: true);
 
-        $this->assertEqualsWithDelta(261_450_000.0, (float) $bag['line_total'], 0.001);
-        $this->assertSame(20_916_000.0, (float) $bag['vat_amount_display']);
-        $this->assertSame(282_366_000.0, (float) $bag['line_gross_display']);
+        $this->assertEqualsWithDelta(261_450_000.0, VietnameseMoneyInput::parse($bag['line_total']), 0.001);
+        $this->assertSame(20_916_000.0, VietnameseMoneyInput::parse($bag['vat_amount_display']));
+        $this->assertSame(282_366_000.0, VietnameseMoneyInput::parse($bag['line_gross_display']));
     }
 
     public function test_sync_review_mode_does_not_overwrite_line_total(): void
@@ -46,9 +47,9 @@ class ManualQuotationLineVatUiTest extends TestCase
 
         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
 
-        $this->assertEqualsWithDelta(999.0, (float) $bag['line_total'], 0.001);
-        $this->assertSame(100.0, (float) $bag['vat_amount_display']);
-        $this->assertSame(1099.0, (float) $bag['line_gross_display']);
+        $this->assertEqualsWithDelta(999.0, VietnameseMoneyInput::parse($bag['line_total']), 0.001);
+        $this->assertSame(100.0, VietnameseMoneyInput::parse($bag['vat_amount_display']));
+        $this->assertSame(1099.0, VietnameseMoneyInput::parse($bag['line_gross_display']));
     }
 
     public function test_apply_inclusive_gross_derives_excl_vat_and_unit_price(): void
@@ -68,10 +69,10 @@ class ManualQuotationLineVatUiTest extends TestCase
 
         ManualQuotationLineVatUi::applyInclusiveGross($set, $get);
 
-        $this->assertSame(261_450_000.0, (float) $bag['line_total']);
-        $this->assertSame(20_916_000.0, (float) $bag['vat_amount_display']);
-        $this->assertEqualsWithDelta(4_150_000.0, (float) $bag['unit_price'], 0.01);
-        $this->assertSame(282_366_000.0, (float) $bag['line_gross_display']);
+        $this->assertSame(261_450_000.0, VietnameseMoneyInput::parse($bag['line_total']));
+        $this->assertSame(20_916_000.0, VietnameseMoneyInput::parse($bag['vat_amount_display']));
+        $this->assertEqualsWithDelta(4_150_000.0, VietnameseMoneyInput::parse($bag['unit_price']), 0.01);
+        $this->assertSame(282_366_000.0, VietnameseMoneyInput::parse($bag['line_gross_display']));
     }
 
     public function test_apply_manual_vat_amount_sets_gross(): void
@@ -88,6 +89,6 @@ class ManualQuotationLineVatUiTest extends TestCase
 
         ManualQuotationLineVatUi::applyManualVatAmount($set, $get);
 
-        $this->assertSame(1_080_000.0, (float) $bag['line_gross_display']);
+        $this->assertSame(1_080_000.0, VietnameseMoneyInput::parse($bag['line_gross_display']));
     }
 }

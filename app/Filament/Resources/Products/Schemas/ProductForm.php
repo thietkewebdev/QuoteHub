@@ -155,6 +155,10 @@ class ProductForm
                             ->label(__('Description'))
                             ->rows(3)
                             ->columnSpanFull(),
+                        Textarea::make('specs_text')
+                            ->label(__('Technical specifications'))
+                            ->rows(4)
+                            ->columnSpanFull(),
                         TextInput::make('barcode')
                             ->label(__('Barcode'))
                             ->maxLength(64),

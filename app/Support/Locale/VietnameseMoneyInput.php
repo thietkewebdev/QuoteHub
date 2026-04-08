@@ -91,4 +91,40 @@ final class VietnameseMoneyInput
 
         return self::format($parsed);
     }
+
+    /**
+     * While typing in Filament/Livewire: apply Vietnamese grouping (.) when the value is parseable.
+     * Skips partial input (e.g. trailing comma) so calculation logic is unchanged.
+     *
+     * @param  callable(string, mixed): mixed  $set  Filament Set utility (use '' path for the active field)
+     */
+    public static function reformatLiveState(callable $set, mixed $state): void
+    {
+        if ($state === null || $state === '') {
+            return;
+        }
+
+        if (is_int($state) || is_float($state)) {
+            $formatted = self::format((float) $state);
+            if ($formatted !== null) {
+                $set('', $formatted);
+            }
+
+            return;
+        }
+
+        $parsed = self::parse($state);
+        if ($parsed === null) {
+            return;
+        }
+
+        $formatted = self::format($parsed);
+        if ($formatted === null) {
+            return;
+        }
+
+        if ($formatted !== (string) $state) {
+            $set('', $formatted);
+        }
+    }
 }

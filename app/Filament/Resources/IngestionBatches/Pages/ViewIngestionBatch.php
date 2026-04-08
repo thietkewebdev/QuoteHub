@@ -29,6 +29,7 @@ class ViewIngestionBatch extends ViewRecord
             'aiExtraction',
             'supplier',
             'quotation',
+            'files.ocrResults',
         ]);
     }
 
@@ -61,6 +62,7 @@ class ViewIngestionBatch extends ViewRecord
                 'aiExtraction',
                 'supplier',
                 'quotation',
+                'files.ocrResults',
             ])
             ->firstOrFail();
     }

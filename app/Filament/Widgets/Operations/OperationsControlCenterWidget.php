@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Widgets\Operations;
 
 use App\Filament\Pages\QuotationComparePage;
-use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
-use App\Filament\Resources\ManualQuotationEntries\ManualQuotationEntryResource;
+use App\Filament\Resources\Products\ProductResource;
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\Quotations\QuotationResource;
 use App\Filament\Resources\Suppliers\SupplierResource;
+use App\Models\Product;
+use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\Locale\VietnamesePresentation;
@@ -48,36 +50,27 @@ final class OperationsControlCenterWidget extends Widget
     {
         $canQuotes = QuotationResource::canViewAny();
         $canSuppliers = SupplierResource::canViewAny();
+        $canProducts = ProductResource::canViewAny();
+        $canPurchaseOrders = PurchaseOrderResource::canViewAny();
 
         $quotationsCount = $canQuotes
             ? (string) number_format(Quotation::query()->count())
             : '—';
 
-        $totalValue = '—';
-        if ($canQuotes) {
-            $sum = (float) (Quotation::query()
-                ->whereNotNull('approved_at')
-                ->where(function ($q): void {
-                    $q->whereNull('pricing_policy')
-                        ->orWhere('pricing_policy', '!=', Quotation::PRICING_POLICY_VOID);
-                })
-                ->sum('total_amount') ?? 0);
-            $totalValue = VietnamesePresentation::vnd($sum) ?? '—';
-        }
-
         $suppliersCount = $canSuppliers
             ? (string) number_format(Supplier::query()->where('is_active', true)->count())
             : '—';
 
-        $pending = '—';
-        if ($canQuotes) {
-            $pending = (string) number_format(Quotation::query()
-                ->whereNull('approved_at')
-                ->where(function ($q): void {
-                    $q->whereNull('pricing_policy')
-                        ->orWhere('pricing_policy', '!=', Quotation::PRICING_POLICY_VOID);
-                })
-                ->count());
+        $productsCount = $canProducts
+            ? (string) number_format(Product::query()->where('is_active', true)->count())
+            : '—';
+
+        $poTotalValue = '—';
+        if ($canPurchaseOrders) {
+            $sum = (float) (PurchaseOrder::query()
+                ->where('status', '!=', PurchaseOrder::STATUS_CANCELLED)
+                ->sum('total_amount') ?? 0);
+            $poTotalValue = VietnamesePresentation::vnd($sum) ?? '—';
         }
 
         return [
@@ -87,19 +80,19 @@ final class OperationsControlCenterWidget extends Widget
                 'value' => $quotationsCount,
             ],
             [
-                'key' => 'value',
-                'label' => __('Total value'),
-                'value' => $totalValue,
-            ],
-            [
                 'key' => 'suppliers',
                 'label' => __('Total suppliers'),
                 'value' => $suppliersCount,
             ],
             [
-                'key' => 'pending',
-                'label' => __('Pending approvals'),
-                'value' => $pending,
+                'key' => 'products',
+                'label' => __('Total products'),
+                'value' => $productsCount,
+            ],
+            [
+                'key' => 'po_value',
+                'label' => __('Total PO value'),
+                'value' => $poTotalValue,
             ],
         ];
     }
@@ -112,21 +105,15 @@ final class OperationsControlCenterWidget extends Widget
         return [
             [
                 'label' => __('Create quotation'),
-                'href' => ManualQuotationEntryResource::getUrl('index'),
+                'href' => QuotationResource::getUrl('index'),
                 'icon' => 'plus',
-                'visible' => ManualQuotationEntryResource::canViewAny(),
+                'visible' => QuotationResource::canViewAny(),
             ],
             [
                 'label' => __('Compare quotations'),
                 'href' => QuotationComparePage::getUrl(),
                 'icon' => 'scale',
                 'visible' => QuotationComparePage::canAccess(),
-            ],
-            [
-                'label' => __('Import data'),
-                'href' => IngestionBatchResource::getUrl('create'),
-                'icon' => 'arrow-up-tray',
-                'visible' => IngestionBatchResource::canCreate(),
             ],
         ];
     }

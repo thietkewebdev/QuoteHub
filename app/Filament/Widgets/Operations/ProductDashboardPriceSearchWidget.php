@@ -59,7 +59,7 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
             ->heading($this->mainHeading())
             ->description($this->mainDescription())
             ->searchable()
-            ->searchPlaceholder(__('Name or SKU…'))
+            ->searchPlaceholder(__('Name, SKU, or technical specifications…'))
             ->headerActions([
                 Action::make('openPriceHistory')
                     ->label(__('Open price history'))
@@ -86,21 +86,20 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                             'product_sku' => $row->product_sku,
                             'best_unit_price' => $row->best_unit_price,
                             'best_supplier_name' => $row->best_supplier_name,
-                            'quote_date_label' => $row->quote_date_label,
-                            'distinct_suppliers' => $row->distinct_suppliers,
+                            'specs_text' => $row->specs_text ?? null,
                         ],
                     ];
                 });
             })
             ->columns([
-                TextColumn::make('product_name')
-                    ->label(__('Product'))
-                    ->wrap()
-                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('product_sku')
                     ->label(__('SKU'))
                     ->placeholder('—')
                     ->fontFamily(FontFamily::Mono),
+                TextColumn::make('product_name')
+                    ->label(__('Product'))
+                    ->wrap()
+                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('best_unit_price')
                     ->label(__('Best unit price (excl. VAT)'))
                     ->placeholder('—')
@@ -112,22 +111,15 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
                     ->badge()
                     ->color('success')
                     ->state(fn (array $record): ?string => $record['best_unit_price'] !== null ? __('Best price') : null),
+                TextColumn::make('specs_text')
+                    ->label(__('Technical specifications'))
+                    ->placeholder('—')
+                    ->wrap()
+                    ->limit(160),
                 TextColumn::make('best_supplier_name')
                     ->label(__('Supplier on that quote'))
                     ->placeholder('—')
                     ->wrap(),
-                TextColumn::make('quote_date_label')
-                    ->label(__('Quote date'))
-                    ->placeholder('—'),
-                TextColumn::make('distinct_suppliers')
-                    ->label(__('Suppliers in history'))
-                    ->badge()
-                    ->formatStateUsing(function ($state): string {
-                        $n = (int) $state;
-
-                        return $n < 1 ? '—' : __(':count suppliers', ['count' => $n]);
-                    })
-                    ->color('gray'),
             ])
             ->paginated(false);
     }
@@ -145,7 +137,7 @@ final class ProductDashboardPriceSearchWidget extends TableWidget
     {
         return new HtmlString(
             '<span class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">'
-            .e(__('Lists active catalog products by name (like the Products page). Shows the lowest ex-VAT unit price from approved lines when available. Use the search box to filter by name or SKU (same rules as price history).'))
+            .e(__('Lists active catalog products by name (like the Products page). Shows the lowest ex-VAT unit price from approved lines when available. Search matches name, SKU, or technical specifications.'))
             .'</span>'
         );
     }

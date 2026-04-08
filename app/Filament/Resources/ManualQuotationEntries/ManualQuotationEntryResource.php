@@ -20,6 +20,8 @@ class ManualQuotationEntryResource extends Resource
 {
     use HasQuoteHubNavigationGroup;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = QuotationReviewDraft::class;
 
     protected static ?int $navigationSort = 2;

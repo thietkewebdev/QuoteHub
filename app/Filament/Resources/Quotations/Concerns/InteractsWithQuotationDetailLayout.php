@@ -8,12 +8,14 @@ use App\Models\Quotation;
 use App\Models\QuotationItem;
 
 /**
- * Financial figures for the quotation detail layout (header uses stored header fields when set, else sums lines).
+ * Financial figures for the quotation detail layout.
+ * Subtotal and VAT use stored header fields when set, else sums from lines.
+ * Grand total is always subtotal + VAT (never a lone stored total_amount that could be excl. VAT or stale).
  */
 trait InteractsWithQuotationDetailLayout
 {
     /**
-     * @return array{sub: float, vat: float, total: float}
+     * @return array{sub: float, vat: float, total: float} total = grand total including VAT (= sub + vat)
      */
     protected function quotationFinancialSummary(Quotation $quotation): array
     {
@@ -41,14 +43,12 @@ trait InteractsWithQuotationDetailLayout
             ? (float) $quotation->tax_amount
             : $vatFromLines;
 
-        $total = $quotation->total_amount !== null
-            ? (float) $quotation->total_amount
-            : ($sub + $vat);
+        $grandTotal = round($sub + $vat, 4);
 
         return [
             'sub' => $sub,
             'vat' => $vat,
-            'total' => $total,
+            'total' => $grandTotal,
         ];
     }
 }

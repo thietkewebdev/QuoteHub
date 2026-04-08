@@ -77,6 +77,26 @@ class Quotation extends Model
         return $this->entry_source === self::ENTRY_SOURCE_MANUAL;
     }
 
+    /**
+     * Approved quotations from the PDF / ingestion pipeline (includes legacy rows with null entry_source).
+     */
+    public function isFromPdfIngestion(): bool
+    {
+        return ! $this->isManualEntry();
+    }
+
+    public function quotationSourceLabel(): string
+    {
+        return $this->isManualEntry()
+            ? __('Quotation source manual')
+            : __('Quotation source pdf');
+    }
+
+    public function quotationSourceBadgeColor(): string
+    {
+        return $this->isManualEntry() ? 'gray' : 'primary';
+    }
+
     public function aiExtraction(): BelongsTo
     {
         return $this->belongsTo(AiExtraction::class);

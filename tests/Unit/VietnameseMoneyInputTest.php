@@ -28,4 +28,29 @@ class VietnameseMoneyInputTest extends TestCase
         $this->assertSame('1.080.000', VietnameseMoneyInput::format(1_080_000.0));
         $this->assertSame('1.080.000,5', VietnameseMoneyInput::format(1_080_000.5));
     }
+
+    public function test_reformat_live_state_formats_plain_digits(): void
+    {
+        $captured = null;
+        $set = function (string $path, mixed $v) use (&$captured): void {
+            $captured = ['path' => $path, 'value' => $v];
+        };
+
+        VietnameseMoneyInput::reformatLiveState($set, '5945000');
+
+        $this->assertSame('', $captured['path']);
+        $this->assertSame('5.945.000', $captured['value']);
+    }
+
+    public function test_reformat_live_state_noop_when_already_formatted(): void
+    {
+        $calls = 0;
+        $set = function (string $path, mixed $v) use (&$calls): void {
+            $calls++;
+        };
+
+        VietnameseMoneyInput::reformatLiveState($set, '5.945.000');
+
+        $this->assertSame(0, $calls);
+    }
 }

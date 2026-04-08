@@ -79,7 +79,7 @@ class ProductResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['brand', 'category']);
+        return parent::getEloquentQuery()->with(['brand']);
     }
 
     public static function canViewAny(): bool

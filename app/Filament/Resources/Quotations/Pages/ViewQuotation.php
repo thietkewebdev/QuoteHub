@@ -4,21 +4,24 @@ namespace App\Filament\Resources\Quotations\Pages;
 
 use App\Actions\PurchaseOrder\CreatePurchaseOrderFromQuotationAction;
 use App\Actions\Quotation\CloneQuotationToManualDraftAction;
+use App\Actions\Quotation\SetQuotationItemProductMappingAction;
 use App\Filament\Resources\ManualQuotationEntries\ManualQuotationEntryResource;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\Quotations\Concerns\InteractsWithQuotationDetailLayout;
 use App\Filament\Resources\Quotations\QuotationResource;
+use App\Models\Product;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\View as SchemaView;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use Throwable;
 
@@ -55,15 +58,21 @@ class ViewQuotation extends ViewRecord
                         $q->loadMissing([
                             'supplier',
                             'items.mappedProduct',
+                            'ingestionBatch',
                             'ingestionBatch.files' => fn ($query) => $query->orderBy('page_order'),
                             'purchaseOrders' => fn ($query) => $query->orderBy('created_at'),
                         ]);
+
+                        $ingestionFile = $q->ingestionBatch?->files->first();
 
                         return [
                             'q' => $q,
                             'financial' => $this->quotationFinancialSummary($q),
                             'editUrl' => QuotationResource::getUrl('edit', ['record' => $q]),
-                            'processTimeline' => $this->buildQuotationProcessTimeline($q),
+                            'canEditQuotationLines' => QuotationResource::canEdit($q),
+                            'quotationFileDownloadUrl' => $ingestionFile !== null
+                                ? route('ingestion.files.download', ['ingestion_file' => $ingestionFile])
+                                : null,
                         ];
                     }),
                 $relationManagers,
@@ -126,7 +135,166 @@ class ViewQuotation extends ViewRecord
                         Notification::make()->danger()->title($e->getMessage())->send();
                     }
                 }),
+            $this->mapQuotationLineItemAction(),
+            $this->unlinkQuotationLineItemAction(),
         ];
+    }
+
+    protected function mapQuotationLineItemAction(): Action
+    {
+        return Action::make('mapQuotationLineItem')
+            ->label(__('Map'))
+            ->hidden()
+            ->modalHeading(function (Action $action): string {
+                $item = $this->resolveQuotationItemForMappingAction($action);
+
+                return $item !== null && $item->mapped_product_id !== null
+                    ? __('Remap line to product')
+                    : __('Map line to product');
+            })
+            ->modalDescription(__('Search by product name or SKU. Raw line fields are not changed. Each save is recorded in the mapping audit log.'))
+            ->modalSubmitActionLabel(__('Save mapping'))
+            ->modalWidth('lg')
+            ->fillForm(function (Action $action): array {
+                $item = $this->resolveQuotationItemForMappingAction($action);
+
+                return [
+                    'product_id' => $item?->mapped_product_id,
+                ];
+            })
+            ->schema(function (Action $action): array {
+                return [
+                    Select::make('product_id')
+                        ->label(__('Product'))
+                        ->placeholder(__('Select a product'))
+                        ->native(false)
+                        ->searchable()
+                        ->required()
+                        ->getSearchResultsUsing(fn (string $search): array => $this->searchProductsForLineMapping($search))
+                        ->getOptionLabelUsing(function ($value): ?string {
+                            if (blank($value)) {
+                                return null;
+                            }
+
+                            $p = Product::query()->whereKey($value)->first();
+                            if ($p === null) {
+                                return null;
+                            }
+                            $sku = $p->sku !== null && $p->sku !== '' ? ' ('.$p->sku.')' : '';
+
+                            return $p->name.$sku;
+                        }),
+                ];
+            })
+            ->action(function (array $data, Action $action): void {
+                $this->saveQuotationLineProductMapping($action, $data['product_id'] ?? null);
+            })
+            ->authorize(fn (): bool => QuotationResource::canEdit($this->getRecord()));
+    }
+
+    protected function unlinkQuotationLineItemAction(): Action
+    {
+        return Action::make('unlinkQuotationLineItem')
+            ->label(__('Unlink'))
+            ->hidden()
+            ->color('danger')
+            ->modalHeading(__('Unlink product mapping?'))
+            ->modalDescription(__('The line stays on the quotation; only the catalog product link is removed.'))
+            ->modalSubmitActionLabel(__('Unlink'))
+            ->requiresConfirmation()
+            ->action(function (Action $action): void {
+                $this->saveQuotationLineProductMapping($action, null);
+            })
+            ->authorize(fn (): bool => QuotationResource::canEdit($this->getRecord()));
+    }
+
+    protected function resolveQuotationItemForMappingAction(Action $action): ?QuotationItem
+    {
+        $id = (int) ($action->getArguments()['quotationItemId'] ?? 0);
+        if ($id <= 0) {
+            return null;
+        }
+
+        /** @var Quotation $quotation */
+        $quotation = $this->getRecord();
+
+        return $quotation->items()->whereKey($id)->first();
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    protected function searchProductsForLineMapping(string $search): array
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return [];
+        }
+
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+        return Product::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($escaped): void {
+                $q->where('name', 'like', '%'.$escaped.'%')
+                    ->orWhere('sku', 'like', '%'.$escaped.'%');
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->mapWithKeys(function (Product $p): array {
+                $sku = $p->sku !== null && $p->sku !== '' ? ' ('.$p->sku.')' : '';
+
+                return [$p->id => $p->name.$sku];
+            })
+            ->all();
+    }
+
+    protected function saveQuotationLineProductMapping(Action $action, mixed $rawProductId): void
+    {
+        $item = $this->resolveQuotationItemForMappingAction($action);
+
+        if ($item === null) {
+            Notification::make()
+                ->danger()
+                ->title(__('Line not found'))
+                ->send();
+
+            return;
+        }
+
+        $user = auth()->user();
+        if (! $user instanceof User) {
+            Notification::make()
+                ->danger()
+                ->title(__('You must be signed in.'))
+                ->send();
+
+            return;
+        }
+
+        $productId = $rawProductId === null || $rawProductId === '' ? null : (int) $rawProductId;
+
+        try {
+            app(SetQuotationItemProductMappingAction::class)->execute($item, $user, $productId);
+        } catch (Throwable $e) {
+            Notification::make()
+                ->danger()
+                ->title($e->getMessage())
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->success()
+            ->title($productId === null ? __('Mapping removed') : __('Mapping saved'))
+            ->send();
+
+        /** @var Quotation $quotation */
+        $quotation = $this->getRecord();
+        $quotation->unsetRelation('items');
+        $quotation->load(['items.mappedProduct']);
     }
 
     public function getTitle(): string
@@ -180,43 +348,5 @@ class ViewQuotation extends ViewRecord
             ->success()
             ->title(__('Line duplicated'))
             ->send();
-    }
-
-    /**
-     * @return list<array{key: string, label: string, done: bool, at: ?Carbon, href: ?string}>
-     */
-    protected function buildQuotationProcessTimeline(Quotation $quotation): array
-    {
-        $quotation->loadMissing([
-            'purchaseOrders' => fn ($query) => $query->orderBy('created_at'),
-        ]);
-
-        $firstPo = $quotation->purchaseOrders->first();
-
-        return [
-            [
-                'key' => 'created',
-                'label' => __('Created'),
-                'done' => true,
-                'at' => $quotation->created_at,
-                'href' => null,
-            ],
-            [
-                'key' => 'approved',
-                'label' => __('Approved'),
-                'done' => $quotation->approved_at !== null,
-                'at' => $quotation->approved_at,
-                'href' => null,
-            ],
-            [
-                'key' => 'po',
-                'label' => __('PO created'),
-                'done' => $firstPo !== null,
-                'at' => $firstPo?->created_at,
-                'href' => $firstPo !== null
-                    ? PurchaseOrderResource::getUrl('view', ['record' => $firstPo])
-                    : null,
-            ],
-        ];
     }
 }

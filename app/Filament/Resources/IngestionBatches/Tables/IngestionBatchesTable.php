@@ -4,6 +4,7 @@ namespace App\Filament\Resources\IngestionBatches\Tables;
 
 use App\Filament\Resources\IngestionBatches\IngestionBatchResource;
 use App\Models\IngestionBatch;
+use App\Support\Ingestion\IngestionBatchPipelineProgressPresenter;
 use App\Support\Locale\VietnamesePresentation;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -12,12 +13,14 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class IngestionBatchesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['files.ocrResults']))
             ->columns([
                 TextColumn::make('id')
                     ->label(__('ID'))
@@ -37,7 +40,16 @@ class IngestionBatchesTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->label(__('Status'))
+                    ->formatStateUsing(fn (?string $state): string => IngestionBatch::localizedStatusLabel($state))
                     ->badge()
+                    ->color(fn (?string $state): string => IngestionBatch::statusBadgeColor($state))
+                    ->description(function (IngestionBatch $record): ?string {
+                        if (! in_array($record->status, ['preprocessing', 'ai_processing'], true)) {
+                            return null;
+                        }
+
+                        return IngestionBatchPipelineProgressPresenter::tableProgressPlainText($record);
+                    })
                     ->sortable(),
                 TextColumn::make('file_count')
                     ->label(__('Files'))

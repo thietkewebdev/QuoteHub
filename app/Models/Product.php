@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
     'name',
     'slug',
     'description',
+    'specs_text',
     'barcode',
     'unit_of_measure',
     'is_active',

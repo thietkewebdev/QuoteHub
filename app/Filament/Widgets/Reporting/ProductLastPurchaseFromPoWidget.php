@@ -84,14 +84,14 @@ final class ProductLastPurchaseFromPoWidget extends TableWidget
                 });
             })
             ->columns([
-                TextColumn::make('product_name')
-                    ->label(__('Product'))
-                    ->wrap()
-                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('product_sku')
                     ->label(__('SKU'))
                     ->placeholder('—')
                     ->fontFamily(FontFamily::Mono),
+                TextColumn::make('product_name')
+                    ->label(__('Product'))
+                    ->wrap()
+                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('supplier_name')
                     ->label(__('Supplier'))
                     ->wrap(),

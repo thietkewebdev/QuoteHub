@@ -60,9 +60,9 @@ final class ProductCreatePrefillFromQuotationLine
 
         $specs = trim((string) ($item->specs_text ?? ''));
         if ($specs !== '') {
-            $desc = Str::limit($specs, 4000, '…');
-            $set($p('description'), $desc, isAbsolute: true);
-            $partial['description'] = $desc;
+            $limited = Str::limit($specs, 65000, '…');
+            $set($p('specs_text'), $limited, isAbsolute: true);
+            $partial['specs_text'] = $limited;
         }
 
         $set($p('slug'), null, isAbsolute: true);

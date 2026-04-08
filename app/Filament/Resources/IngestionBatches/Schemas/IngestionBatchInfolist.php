@@ -3,11 +3,13 @@
 namespace App\Filament\Resources\IngestionBatches\Schemas;
 
 use App\Models\IngestionBatch;
+use App\Support\Ingestion\IngestionBatchPipelineProgressPresenter;
 use App\Support\Locale\VietnamesePresentation;
 use Filament\Infolists\Components\CodeEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class IngestionBatchInfolist
 {
@@ -33,7 +35,22 @@ class IngestionBatchInfolist
                             ->columnSpanFull(),
                         TextEntry::make('status')
                             ->label(__('Status'))
-                            ->badge(),
+                            ->formatStateUsing(fn (?string $state): string => IngestionBatch::localizedStatusLabel($state))
+                            ->badge()
+                            ->color(fn (?string $state): string => IngestionBatch::statusBadgeColor($state)),
+                        TextEntry::make('pipeline_progress')
+                            ->label(__('Pipeline progress'))
+                            ->visible(fn (IngestionBatch $record): bool => in_array($record->status, ['preprocessing', 'ai_processing'], true))
+                            ->html()
+                            ->columnSpanFull()
+                            ->formatStateUsing(function (TextEntry $component, $state): HtmlString {
+                                $record = $component->getRecord();
+                                if (! $record instanceof IngestionBatch) {
+                                    return new HtmlString('');
+                                }
+
+                                return IngestionBatchPipelineProgressPresenter::infolistProgressHtml($record);
+                            }),
                         TextEntry::make('file_count')
                             ->label(__('File count'))
                             ->numeric(),

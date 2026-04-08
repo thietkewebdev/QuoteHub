@@ -64,6 +64,39 @@ class IngestionBatch extends Model
         return $this->hasOne(QuotationReviewDraft::class);
     }
 
+    public static function localizedStatusLabel(?string $status): string
+    {
+        if ($status === null || $status === '') {
+            return '—';
+        }
+
+        return match ($status) {
+            'pending' => __('Pending'),
+            'uploaded' => __('Uploaded'),
+            'preprocessing' => __('Preprocessing'),
+            'ocr_done' => __('OCR done'),
+            'ai_processing' => __('AI processing'),
+            'ai_done' => __('AI done'),
+            'ai_failed' => __('AI failed'),
+            'review_pending' => __('Review pending'),
+            'review_rejected' => __('Review rejected'),
+            'review_corrections_requested' => __('Corrections requested'),
+            'approved' => __('Approved'),
+            default => $status,
+        };
+    }
+
+    public static function statusBadgeColor(?string $status): string
+    {
+        return match ($status) {
+            'preprocessing', 'ai_processing' => 'warning',
+            'ocr_done', 'ai_done', 'review_pending' => 'info',
+            'approved' => 'success',
+            'ai_failed', 'review_rejected' => 'danger',
+            default => 'gray',
+        };
+    }
+
     public function hasOcrResults(): bool
     {
         $rows = OcrResult::query()

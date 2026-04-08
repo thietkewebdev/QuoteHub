@@ -5,6 +5,8 @@ namespace App\Services\Quotation;
 use App\Models\AiExtraction;
 use App\Models\IngestionBatch;
 use App\Models\QuotationReviewDraft;
+use App\Support\Locale\VietnameseMoneyInput;
+use App\Support\Quotation\ManualQuotationLineVatUi;
 use App\Support\Quotation\QuotationReviewOcrPayloadKeys;
 use App\Support\Quotation\QuotationTextNormalizer;
 use Carbon\Carbon;
@@ -26,14 +28,14 @@ class QuotationReviewPayloadFactory
 
         if ($draft !== null && is_array($draft->payload_json)) {
             if ($this->shouldReseedDraftFromAi($draft, $ai)) {
-                return $this->persistReseededDraft($batch, $draft, $ai);
+                return $this->withVietnameseMoneyDisplayForForm($this->persistReseededDraft($batch, $draft, $ai));
             }
 
-            return $draft->payload_json;
+            return $this->withVietnameseMoneyDisplayForForm($draft->payload_json);
         }
 
         if (! $ai instanceof AiExtraction || ! is_array($ai->extraction_json)) {
-            return $this->emptyPayload();
+            return $this->withVietnameseMoneyDisplayForForm($this->emptyPayload());
         }
 
         $payload = $this->fromExtractionJson($ai->extraction_json);
@@ -55,7 +57,7 @@ class QuotationReviewPayloadFactory
             $batch->forceFill(['status' => 'review_pending'])->save();
         }
 
-        return $payload;
+        return $this->withVietnameseMoneyDisplayForForm($payload);
     }
 
     private function shouldReseedDraftFromAi(QuotationReviewDraft $draft, ?AiExtraction $ai): bool
@@ -112,6 +114,90 @@ class QuotationReviewPayloadFactory
         }
 
         return $payload;
+    }
+
+    /**
+     * Filament fill() uses raw state; review line fields in "manual adjust" mode do not run sync for unit_price/line_total.
+     * Format amounts here so the review form shows Vietnamese grouping (.) immediately after AI seed or when loading a draft.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function withVietnameseMoneyDisplayForForm(array $payload): array
+    {
+        if (array_key_exists('total_amount', $payload) && $payload['total_amount'] !== null && $payload['total_amount'] !== '') {
+            $formatted = VietnameseMoneyInput::formatForDisplay($payload['total_amount']);
+            if ($formatted !== null) {
+                $payload['total_amount'] = $formatted;
+            }
+        }
+
+        if (! isset($payload['items']) || ! is_array($payload['items'])) {
+            return $payload;
+        }
+
+        foreach ($payload['items'] as $i => $item) {
+            if (! is_array($payload['items'][$i])) {
+                continue;
+            }
+            $this->ensureLineSubtotalFromQtyUnitPrice($payload['items'][$i]);
+        }
+
+        foreach ($payload['items'] as $i => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            foreach (['unit_price', 'line_total', 'vat_amount_display', 'line_gross_display'] as $key) {
+                if (! array_key_exists($key, $payload['items'][$i])) {
+                    continue;
+                }
+                $v = $payload['items'][$i][$key];
+                if ($v === null || $v === '') {
+                    continue;
+                }
+                $formatted = VietnameseMoneyInput::formatForDisplay($v);
+                if ($formatted !== null) {
+                    $payload['items'][$i][$key] = $formatted;
+                }
+            }
+        }
+
+        // AI payload often omits vat_amount_display & line_gross_display; recompute like the repeater sync + setMoney().
+        foreach ($payload['items'] as $i => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $bag = $payload['items'][$i];
+            $set = function (string $key, mixed $value) use (&$bag): void {
+                $bag[$key] = $value;
+            };
+            $get = fn (string $key): mixed => $bag[$key] ?? null;
+            ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
+            $payload['items'][$i] = $bag;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * When AI omits line subtotal (excl. VAT), derive it so VAT / gross display can sync.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function ensureLineSubtotalFromQtyUnitPrice(array &$row): void
+    {
+        $lt = $row['line_total'] ?? null;
+        if ($lt !== null && $lt !== '') {
+            return;
+        }
+
+        $qRaw = $row['quantity'] ?? null;
+        $q = is_numeric($qRaw) ? (float) $qRaw : (VietnameseMoneyInput::parse($qRaw) ?? 0.0);
+        $p = VietnameseMoneyInput::parse($row['unit_price'] ?? null);
+        if ($q > 0 && $p !== null && $p > 0) {
+            $row['line_total'] = round($q * $p, 4);
+        }
     }
 
     /**

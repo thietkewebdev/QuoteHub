@@ -47,6 +47,13 @@ class ProductInfolist
                                     ->iconColor('gray')
                                     ->prose()
                                     ->columnSpanFull(),
+                                TextEntry::make('specs_text')
+                                    ->label(__('Technical specifications'))
+                                    ->placeholder('—')
+                                    ->icon(Heroicon::OutlinedDocumentText)
+                                    ->iconColor('gray')
+                                    ->prose()
+                                    ->columnSpanFull(),
                             ]),
                     ])
                     ->columns(1),

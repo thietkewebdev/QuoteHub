@@ -36,7 +36,7 @@ class QuotationsTable
                     'items.mappedProduct',
                 ]);
             })
-            ->searchPlaceholder(__('Search supplier, quote #, or line items (name, model, brand)'))
+            ->searchPlaceholder(__('Search supplier, quote #, line items, or technical specifications'))
             ->searchable([
                 function (Builder $query, string $search): void {
                     self::applyGlobalSearchConstraint($query, $search);
@@ -46,11 +46,6 @@ class QuotationsTable
                 TextColumn::make('id')
                     ->label(__('ID'))
                     ->sortable(),
-                TextColumn::make('approval_status')
-                    ->label(__('Status'))
-                    ->getStateUsing(fn (Quotation $record): string => $record->approvalStatusLabel())
-                    ->badge()
-                    ->color(fn (Quotation $record): string => $record->approvalStatusColor()),
                 TextColumn::make('supplier_name')
                     ->label(__('Supplier name'))
                     ->searchable()
@@ -65,6 +60,25 @@ class QuotationsTable
 
                         return $record->items
                             ->map(fn (QuotationItem $item): string => $item->displayLabel())
+                            ->values()
+                            ->all();
+                    })
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->wrap(),
+                TextColumn::make('line_specs_text')
+                    ->label(__('Technical specifications'))
+                    ->getStateUsing(function (Quotation $record): array {
+                        if ($record->items->isEmpty()) {
+                            return ['—'];
+                        }
+
+                        return $record->items
+                            ->map(function (QuotationItem $item): string {
+                                $s = trim((string) ($item->specs_text ?? ''));
+
+                                return $s !== '' ? $s : '—';
+                            })
                             ->values()
                             ->all();
                     })
@@ -105,41 +119,18 @@ class QuotationsTable
                     ->listWithLineBreaks()
                     ->alignment(Alignment::End)
                     ->placeholder('—'),
-                TextColumn::make('line_amounts_incl_vat')
-                    ->label(__('Amount (incl. VAT)'))
-                    ->getStateUsing(function (Quotation $record): array {
-                        if ($record->items->isEmpty()) {
-                            return ['—'];
-                        }
-
-                        return $record->items
-                            ->map(function (QuotationItem $item): string {
-                                $incl = QuotationLinePresentation::lineTotalIncludingVat($item->line_total, $item->vat_percent);
-
-                                return VietnamesePresentation::vnd($incl) ?? '—';
-                            })
-                            ->values()
-                            ->all();
-                    })
-                    ->listWithLineBreaks()
-                    ->alignment(Alignment::End)
-                    ->placeholder('—'),
                 TextColumn::make('total_amount')
                     ->label(__('Total'))
                     ->sortable()
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state)),
-                TextColumn::make('quote_date')
-                    ->label(__('Quote date'))
-                    ->sortable()
-                    ->formatStateUsing(fn ($state): ?string => $state?->format(VietnamesePresentation::DATE_FORMAT)),
             ])
             ->defaultSort('approved_at', 'desc')
             ->filters([
                 SelectFilter::make('entry_source')
-                    ->label(__('Entry source'))
+                    ->label(__('Source'))
                     ->options([
-                        Quotation::ENTRY_SOURCE_AI_INGESTION => __('AI ingestion'),
-                        Quotation::ENTRY_SOURCE_MANUAL => __('Manual entry'),
+                        Quotation::ENTRY_SOURCE_AI_INGESTION => __('Quotation source pdf'),
+                        Quotation::ENTRY_SOURCE_MANUAL => __('Quotation source manual'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
@@ -226,7 +217,7 @@ class QuotationsTable
     }
 
     /**
-     * Global search: line items (raw_name, raw_model, brand) OR header fields (supplier, quote #) OR numeric id.
+     * Global search: line items (name, model, brand, specs) OR header fields (supplier, quote #) OR numeric id.
      */
     protected static function applyGlobalSearchConstraint(Builder $query, string $search): void
     {
@@ -241,7 +232,7 @@ class QuotationsTable
             $outer->whereHas('items', function (Builder $itemsQuery) use ($term, $connection): void {
                 $itemsQuery->where(function (Builder $inner) use ($term, $connection): void {
                     $isFirst = true;
-                    foreach (['raw_name', 'raw_model', 'brand'] as $column) {
+                    foreach (['raw_name', 'raw_model', 'brand', 'specs_text'] as $column) {
                         $clause = $isFirst ? 'where' : 'orWhere';
                         $inner->{$clause}(
                             generate_search_column_expression($column, isSearchForcedCaseInsensitive: null, databaseConnection: $connection),

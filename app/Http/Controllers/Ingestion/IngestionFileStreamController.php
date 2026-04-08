@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Ingestion;
 
 use App\Http\Controllers\Controller;
 use App\Models\IngestionFile;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IngestionFileStreamController extends Controller
 {
-    public function inline(IngestionFile $ingestionFile): BinaryFileResponse
+    public function inline(IngestionFile $ingestionFile): StreamedResponse
     {
         $this->authorize('view', $ingestionFile);
 
@@ -19,14 +20,18 @@ class IngestionFileStreamController extends Controller
         return $this->respondWithFile($ingestionFile, inline: true);
     }
 
-    public function download(IngestionFile $ingestionFile): BinaryFileResponse
+    public function download(IngestionFile $ingestionFile): StreamedResponse
     {
         $this->authorize('download', $ingestionFile);
 
         return $this->respondWithFile($ingestionFile, inline: false);
     }
 
-    protected function respondWithFile(IngestionFile $ingestionFile, bool $inline): BinaryFileResponse
+    /**
+     * Stream from the configured disk (local or S3-compatible e.g. Cloudflare R2).
+     * {@see FilesystemAdapter::readStream} works for both.
+     */
+    protected function respondWithFile(IngestionFile $ingestionFile, bool $inline): StreamedResponse
     {
         $diskName = config('ingestion.disk', 'local');
         $disk = Storage::disk($diskName);
@@ -34,16 +39,17 @@ class IngestionFileStreamController extends Controller
 
         abort_if(blank($relative) || ! $disk->exists($relative), 404);
 
-        $absolutePath = $disk->path($relative);
         $mime = $ingestionFile->mime_type ?: 'application/octet-stream';
-        $disposition = $inline ? 'inline' : 'attachment';
         $filename = $this->asciiFilename($ingestionFile->original_name ?? basename($relative));
 
-        return response()->file($absolutePath, [
+        $headers = [
             'Content-Type' => $mime,
-            'Content-Disposition' => $disposition.'; filename="'.$filename.'"',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        return $inline
+            ? $disk->response($relative, $filename, $headers, 'inline')
+            : $disk->download($relative, $filename, $headers);
     }
 
     protected function asciiFilename(string $name): string

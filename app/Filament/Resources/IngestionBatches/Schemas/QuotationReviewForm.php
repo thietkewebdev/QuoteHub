@@ -44,7 +44,11 @@ class QuotationReviewForm
                             ->suffix('đ')
                             ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
                             ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
-                            ->rules(self::vnMoneyRules()),
+                            ->rules(self::vnMoneyRules())
+                            ->live(debounce: 250)
+                            ->afterStateUpdated(function ($state, callable $set): void {
+                                VietnameseMoneyInput::reformatLiveState($set, $state);
+                            }),
                         Textarea::make('reviewer_notes')
                             ->label(__('Reviewer notes (internal)'))
                             ->rows(2)
@@ -68,7 +72,7 @@ class QuotationReviewForm
                                 TextInput::make('quantity')
                                     ->label(__('Quantity'))
                                     ->numeric()
-                                    ->live(onBlur: true)
+                                    ->live(debounce: 250)
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
@@ -81,11 +85,12 @@ class QuotationReviewForm
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
                                     ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
                                     ->rules(self::vnMoneyRules())
-                                    ->live(onBlur: true)
+                                    ->live(debounce: 250)
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        VietnameseMoneyInput::reformatLiveState($set, $state);
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     }),
                                 TextInput::make('line_total')
@@ -94,19 +99,20 @@ class QuotationReviewForm
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
                                     ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
                                     ->rules(self::vnMoneyRules())
-                                    ->live(onBlur: true)
+                                    ->live(debounce: 250)
                                     ->helperText(__('Pre-tax row total; adjust if it does not match quantity × unit price.'))
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        VietnameseMoneyInput::reformatLiveState($set, $state);
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     }),
                                 TextInput::make('vat_percent')
                                     ->label(__('VAT %'))
                                     ->numeric()
                                     ->step(0.0001)
-                                    ->live(onBlur: true)
+                                    ->live(debounce: 250)
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
@@ -119,13 +125,13 @@ class QuotationReviewForm
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
                                     ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
                                     ->rules(self::vnMoneyRules())
-                                    ->live(onBlur: true)
-                                    ->dehydrated(false)
+                                    ->live(debounce: 250)
                                     ->helperText(__('Filled from VAT % (rounded to whole đồng); edit to match invoice rounding.'))
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        VietnameseMoneyInput::reformatLiveState($set, $state);
                                         ManualQuotationLineVatUi::applyManualVatAmount($set, $get);
                                     }),
                                 TextInput::make('line_gross_display')
@@ -134,14 +140,14 @@ class QuotationReviewForm
                                     ->formatStateUsing(fn ($state): ?string => VietnameseMoneyInput::formatForDisplay($state))
                                     ->dehydrateStateUsing(fn ($state): ?float => VietnameseMoneyInput::parse($state))
                                     ->rules(self::vnMoneyRules())
-                                    ->live(onBlur: true)
-                                    ->dehydrated(false)
+                                    ->live(debounce: 250)
                                     ->columnSpanFull()
                                     ->helperText(__('Optional: enter the invoice total with VAT; excl. subtotal and VAT are derived from VAT %.'))
                                     ->afterStateHydrated(function ($state, callable $set, callable $get): void {
                                         ManualQuotationLineVatUi::sync($set, $get, subtotalFromQtyUnitPrice: false);
                                     })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                        VietnameseMoneyInput::reformatLiveState($set, $state);
                                         ManualQuotationLineVatUi::applyInclusiveGross($set, $get);
                                     }),
                                 Textarea::make('specs_text')

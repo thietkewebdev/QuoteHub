@@ -24,6 +24,8 @@ class IngestionBatchResource extends Resource
 {
     use HasQuoteHubNavigationGroup;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = IngestionBatch::class;
 
     protected static ?int $navigationSort = 3;
@@ -32,7 +34,7 @@ class IngestionBatchResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Báo giá tự động');
+        return __('Ingestion batches');
     }
 
     public static function getModelLabel(): string

@@ -75,7 +75,7 @@ final class MapQuotationItemToProductAction
                                         ->orWhere('sku', 'like', '%'.$escaped.'%');
                                 })
                                 ->orderBy('name')
-                                ->limit(50)
+                                ->limit(20)
                                 ->get()
                                 ->mapWithKeys(function (Product $p): array {
                                     $sku = $p->sku !== null && $p->sku !== '' ? ' ('.$p->sku.')' : '';

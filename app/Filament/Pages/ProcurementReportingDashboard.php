@@ -3,12 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Concerns\HasQuoteHubNavigationGroup;
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
+use App\Filament\Resources\Quotations\QuotationResource;
 use App\Filament\Widgets\Reporting\ApprovedQuotationsWithoutPurchaseOrderWidget;
 use App\Filament\Widgets\Reporting\ProductLastPurchaseFromPoWidget;
 use App\Filament\Widgets\Reporting\PurchaseOrdersDueSoonWidget;
 use App\Filament\Widgets\Reporting\QuotationsValidityAlertsWidget;
-use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
-use App\Filament\Resources\Quotations\QuotationResource;
 use BackedEnum;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;

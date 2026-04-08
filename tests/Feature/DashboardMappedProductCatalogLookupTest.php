@@ -101,4 +101,25 @@ class DashboardMappedProductCatalogLookupTest extends TestCase
         $this->assertCount(1, $rows);
         $this->assertSame('CamelCase Product', $rows[0]->product_name);
     }
+
+    public function test_search_matches_technical_specifications(): void
+    {
+        Product::query()->create([
+            'supplier_id' => null,
+            'brand_id' => null,
+            'product_category_id' => null,
+            'sku' => 'X-9',
+            'name' => 'Obscure widget',
+            'slug' => 'obscure-widget',
+            'specs_text' => 'USB 3.0 interface 500 DPI scanner',
+            'is_active' => true,
+        ]);
+
+        $svc = app(DashboardMappedProductBestPrices::class);
+        $rows = $svc->catalogLookupRows('scanner', 10);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('Obscure widget', $rows[0]->product_name);
+        $this->assertStringContainsString('scanner', (string) $rows[0]->specs_text);
+    }
 }

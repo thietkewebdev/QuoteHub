@@ -43,14 +43,14 @@ final class ProductBestPriceSpotlightWidget extends TableWidget
                     ];
                 }))
             ->columns([
-                TextColumn::make('product_name')
-                    ->label(__('Product'))
-                    ->wrap()
-                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('product_sku')
                     ->label(__('SKU'))
                     ->placeholder('—')
                     ->fontFamily(FontFamily::Mono),
+                TextColumn::make('product_name')
+                    ->label(__('Product'))
+                    ->wrap()
+                    ->url(fn (array $record): string => ProductResource::getUrl('view', ['record' => $record['product_id']])),
                 TextColumn::make('best_unit_price')
                     ->label(__('Best unit price (excl. VAT)'))
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state)),

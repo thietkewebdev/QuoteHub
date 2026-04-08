@@ -19,11 +19,16 @@ class ProductsTable
         return $table
             ->modifyQueryUsing(function (Builder $query): Builder {
                 return $query
-                    ->with(['brand', 'category'])
+                    ->with(['brand'])
                     ->addSelect([
                         'lowest_visible_unit_price' => PriceHistoryQuery::lowestVisibleUnitPricePerProductSubquery(),
                     ]);
             })
+            ->searchable([
+                'specs_text',
+                'description',
+            ])
+            ->searchPlaceholder(__('Search SKU, name, brand, or technical specifications'))
             ->columns([
                 TextColumn::make('sku')
                     ->label(__('SKU'))
@@ -39,10 +44,11 @@ class ProductsTable
                     ->label(__('Brand'))
                     ->sortable()
                     ->placeholder('—'),
-                TextColumn::make('category.name')
-                    ->label(__('Category'))
-                    ->sortable()
-                    ->placeholder('—'),
+                TextColumn::make('specs_text')
+                    ->label(__('Technical specifications'))
+                    ->placeholder('—')
+                    ->wrap()
+                    ->limit(120),
                 TextColumn::make('lowest_visible_unit_price')
                     ->label(__('Lowest unit price'))
                     ->formatStateUsing(fn ($state): ?string => VietnamesePresentation::vnd($state))

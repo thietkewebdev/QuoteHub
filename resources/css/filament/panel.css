@@ -2,3 +2,25 @@
 
 /* Custom Filament Blade views (quotation detail, dashboard widgets, etc.) */
 @source '../../views/**/*.blade.php';
+
+@keyframes fi-ingestion-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(400%);
+    }
+}
+
+.fi-ingestion-progress-indeterminate {
+    animation: fi-ingestion-indeterminate 1.25s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fi-ingestion-progress-indeterminate {
+        animation: none;
+        transform: translateX(0);
+        width: 45%;
+    }
+}

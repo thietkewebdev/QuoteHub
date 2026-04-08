@@ -25,7 +25,7 @@ final class ManualQuotationLineVatUi
         $subtotalFromQtyPrice = ($q > 0 && $p > 0) ? round($q * $p, 4) : null;
 
         if ($subtotalFromQtyUnitPrice && $subtotalFromQtyPrice !== null) {
-            $set('line_total', $subtotalFromQtyPrice);
+            self::setMoney($set, 'line_total', $subtotalFromQtyPrice);
             $lt = $subtotalFromQtyPrice;
         } else {
             $lt = self::toNullableFloat($get('line_total'));
@@ -41,11 +41,11 @@ final class ManualQuotationLineVatUi
 
         if ($vat !== null) {
             $vatAmt = round($lt * $vat / 100, 0);
-            $set('vat_amount_display', $vatAmt);
-            $set('line_gross_display', round($lt + $vatAmt, 0));
+            self::setMoney($set, 'vat_amount_display', (float) $vatAmt);
+            self::setMoney($set, 'line_gross_display', (float) round($lt + $vatAmt, 0));
         } else {
             $set('vat_amount_display', null);
-            $set('line_gross_display', $lt);
+            self::setMoney($set, 'line_gross_display', $lt);
         }
     }
 
@@ -70,15 +70,15 @@ final class ManualQuotationLineVatUi
 
         $excl = (int) round($gross / $den, 0);
         $vatAmt = (int) round($gross - $excl, 0);
-        $set('line_total', $excl);
-        $set('vat_amount_display', $vatAmt);
+        self::setMoney($set, 'line_total', (float) $excl);
+        self::setMoney($set, 'vat_amount_display', (float) $vatAmt);
 
         $q = self::toFloat($get('quantity'));
         if ($q > 0) {
-            $set('unit_price', round($excl / $q, 4));
+            self::setMoney($set, 'unit_price', round($excl / $q, 4));
         }
 
-        $set('line_gross_display', (float) ($excl + $vatAmt));
+        self::setMoney($set, 'line_gross_display', (float) ($excl + $vatAmt));
     }
 
     /**
@@ -95,7 +95,22 @@ final class ManualQuotationLineVatUi
             return;
         }
 
-        $set('line_gross_display', round($lt + $vatAmt, 0));
+        self::setMoney($set, 'line_gross_display', (float) round($lt + $vatAmt, 0));
+    }
+
+    /**
+     * @param  callable(string, mixed): void  $set
+     */
+    private static function setMoney(callable $set, string $key, ?float $value): void
+    {
+        if ($value === null) {
+            $set($key, null);
+
+            return;
+        }
+
+        $formatted = VietnameseMoneyInput::format($value);
+        $set($key, $formatted ?? (string) $value);
     }
 
     private static function toFloat(mixed $v): float

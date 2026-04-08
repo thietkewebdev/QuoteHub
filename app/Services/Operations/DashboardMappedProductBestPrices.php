@@ -52,6 +52,7 @@ final class DashboardMappedProductBestPrices
      *     best_supplier_name: string,
      *     quote_date_label: ?string,
      *     distinct_suppliers: int,
+     *     specs_text: ?string,
      * }>
      */
     public function catalogLookupRows(?string $query, int $limit = 25): Collection
@@ -71,11 +72,12 @@ final class DashboardMappedProductBestPrices
 
         return $products->map(function (Product $product) use ($base, $byProductId): object {
             $group = $byProductId->get($product->getKey());
-            if ($group === null) {
-                return $this->emptyPriceRowForProduct($product);
-            }
+            $row = $group === null
+                ? $this->emptyPriceRowForProduct($product)
+                : $this->hydrateOneSpotlightGroup($base, $group);
+            $row->specs_text = $this->productSpecsForDisplay($product);
 
-            return $this->hydrateOneSpotlightGroup($base, $group);
+            return $row;
         })->values();
     }
 
@@ -95,7 +97,8 @@ final class DashboardMappedProductBestPrices
             $op = $this->nameOrSkuLikeOperator();
             $q->where(function (EloquentBuilder $w) use ($pattern, $op): void {
                 $w->where('name', $op, $pattern)
-                    ->orWhere('sku', $op, $pattern);
+                    ->orWhere('sku', $op, $pattern)
+                    ->orWhere('specs_text', $op, $pattern);
             });
         }
 
@@ -108,6 +111,13 @@ final class DashboardMappedProductBestPrices
     private function nameOrSkuLikeOperator(): string
     {
         return Product::query()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+    }
+
+    private function productSpecsForDisplay(Product $product): ?string
+    {
+        $s = trim((string) ($product->specs_text ?? ''));
+
+        return $s !== '' ? $s : null;
     }
 
     private function emptyPriceRowForProduct(Product $product): object
