@@ -75,9 +75,7 @@ class QuotationsTable
 
                         return $record->items
                             ->map(function (QuotationItem $item): string {
-                                $s = trim((string) ($item->specs_text ?? ''));
-
-                                return $s !== '' ? $s : '—';
+                                return self::resolvedLineSpecsText($item);
                             })
                             ->values()
                             ->all();
@@ -241,6 +239,13 @@ class QuotationsTable
                         );
                         $isFirst = false;
                     }
+                    $inner->orWhereHas('mappedProduct', function (Builder $mp) use ($term, $connection): void {
+                        $mp->where(
+                            generate_search_column_expression('specs_text', isSearchForcedCaseInsensitive: null, databaseConnection: $connection),
+                            'like',
+                            "%{$term}%",
+                        );
+                    });
                 });
             });
 
@@ -260,5 +265,24 @@ class QuotationsTable
                 $outer->orWhere('id', '=', (int) $search);
             }
         });
+    }
+
+    /**
+     * Line specs from the quotation row; if empty, fall back to catalog product specs when the line is mapped.
+     */
+    private static function resolvedLineSpecsText(QuotationItem $item): string
+    {
+        $s = trim((string) ($item->specs_text ?? ''));
+        if ($s !== '') {
+            return $s;
+        }
+
+        $product = $item->relationLoaded('mappedProduct')
+            ? $item->mappedProduct
+            : $item->mappedProduct()->first();
+
+        $fromCatalog = trim((string) ($product?->specs_text ?? ''));
+
+        return $fromCatalog !== '' ? $fromCatalog : '—';
     }
 }
